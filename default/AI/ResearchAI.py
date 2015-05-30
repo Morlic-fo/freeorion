@@ -5,6 +5,7 @@ import AIDependencies
 import AIstate
 import traceback
 import ColonisationAI
+import UniverseUtilsAI
 from freeorion_tools import tech_is_complete, chat_human
 
 inProgressTechs = {}
@@ -32,7 +33,7 @@ def generate_research_orders():
     empire = fo.getEmpire()
     empire_id = empire.empireID
     enemies_sighted = foAI.foAIstate.misc.get('enemies_sighted', {})
-    galaxy_is_sparse = ColonisationAI.galaxy_is_sparse()
+    galaxy_is_sparse = UniverseUtilsAI.galaxy_is_sparse()
     print "Research Queue Management:"
     resource_production = empire.resourceProduction(fo.resourceType.research)
     print "\nTotal Current Research Points: %.2f\n" % resource_production

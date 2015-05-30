@@ -9,6 +9,7 @@ import FreeOrionAI as foAI
 import InvasionAI
 import MilitaryAI
 import PlanetUtilsAI
+import UniverseUtilsAI
 import EnumsAI
 import ProductionAI
 import ResearchAI
@@ -128,7 +129,7 @@ def calculateResearchPriority():
     ownedPlanetIDs = PlanetUtilsAI.get_owned_planets_by_empire(universe.planetIDs)
     planets = map(universe.getPlanet, ownedPlanetIDs)
     targetRP = sum( map( lambda x: x.currentMeterValue(fo.meterType.targetResearch), planets) )
-    galaxy_is_sparse = ColonisationAI.galaxy_is_sparse()
+    galaxy_is_sparse = UniverseUtilsAI.galaxy_is_sparse()
     enemies_sighted = foAI.foAIstate.misc.get('enemies_sighted',{})
 
 
@@ -225,7 +226,7 @@ def calculateColonisationPriority():
     """calculates the demand for colony ships by colonisable planets"""
     global allottedColonyTargets, colony_growth_barrier
     enemies_sighted = foAI.foAIstate.misc.get('enemies_sighted',{})
-    galaxy_is_sparse = ColonisationAI.galaxy_is_sparse()
+    galaxy_is_sparse = UniverseUtilsAI.galaxy_is_sparse()
     total_pp = fo.getEmpire().productionPoints
     num_colonies = len( list(AIstate.popCtrIDs) )
     # significant growth barrier for low aggression, negligible for high aggression
@@ -275,7 +276,7 @@ def calculateOutpostPriority():
     base_outpost_cost = AIDependencies.OUTPOST_POD_COST
 
     enemies_sighted = foAI.foAIstate.misc.get('enemies_sighted',{})
-    galaxy_is_sparse = ColonisationAI.galaxy_is_sparse()
+    galaxy_is_sparse = UniverseUtilsAI.galaxy_is_sparse()
     total_pp = fo.getEmpire().productionPoints
     num_colonies = len( list(AIstate.popCtrIDs) )
     # significant growth barrier for low aggression, negligible for high aggression

@@ -2,12 +2,12 @@ import freeOrionAIInterface as fo  # pylint: disable=import-error
 import FreeOrionAI as foAI
 import AIstate
 import AITarget
-from EnumsAI import AIFleetMissionType, TargetType, AIPriorityType
+from EnumsAI import AIFleetMissionType, TargetType
 import FleetUtilsAI
 from FleetUtilsAI import combine_ratings, combine_ratings_list, rating_needed
 import PlanetUtilsAI
+import UniverseUtilsAI
 import PriorityAI
-import ColonisationAI
 import ProductionAI
 from freeorion_tools import ppstring
 
@@ -414,7 +414,7 @@ def get_military_fleets(milFleetIDs=None, tryReset=True, thisround="Main"):
 
     other_targeted_system_ids = []
     # targetable_ids = ColonisationAI.annexableSystemIDs.union(empire.fleetSupplyableSystemIDs)
-    targetable_ids = set(ColonisationAI.systems_by_supply_tier.get(0, []) + ColonisationAI.systems_by_supply_tier.get(1, []))
+    targetable_ids = set(UniverseUtilsAI.get_systems_by_supply_tier(0) + UniverseUtilsAI.get_systems_by_supply_tier(1))
     for sys_id in AIstate.opponentSystemIDs:
         if sys_id in targetable_ids:
             other_targeted_system_ids.append(sys_id)

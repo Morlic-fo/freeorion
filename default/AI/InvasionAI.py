@@ -5,6 +5,7 @@ import AIDependencies
 import EnumsAI
 import FleetUtilsAI
 import PlanetUtilsAI
+import UniverseUtilsAI
 import AITarget
 import math
 import ProductionAI
@@ -38,7 +39,7 @@ def get_invasion_fleets():
     fleet_suppliable_system_ids = empire.fleetSupplyableSystemIDs
     fleet_suppliable_planet_ids = PlanetUtilsAI.get_planets_in__systems_ids(fleet_suppliable_system_ids)
 
-    prime_invadable_system_ids = set(ColonisationAI.annexable_system_ids)
+    prime_invadable_system_ids = set(UniverseUtilsAI.get_all_annexable_system_ids())
     prime_invadable_planet_ids = PlanetUtilsAI.get_planets_in__systems_ids(prime_invadable_system_ids)
 
     visible_system_ids = foAI.foAIstate.visInteriorSystemIDs.keys() + foAI.foAIstate. visBorderSystemIDs.keys()
@@ -342,13 +343,14 @@ def evaluate_invasion_planet(planet_id, empire, secure_fleet_missions, verbose=T
     enemy_val = 0
     if planet.owner != -1:  # value in taking this away from an enemy
         enemy_val = 20 * (planet.currentMeterValue(fo.meterType.targetIndustry) + 2*planet.currentMeterValue(fo.meterType.targetResearch))
-    if p_sys_id in ColonisationAI.annexable_system_ids:  # TODO: extend to rings
+    if p_sys_id in UniverseUtilsAI.get_all_annexable_system_ids():  # TODO: extend to rings
         supply_val = 100
-    elif p_sys_id in ColonisationAI.annexable_ring1:
+     # TODO: Can these statements actually ever be reached?
+    elif p_sys_id in UniverseUtilsAI.get_systems_by_supply_tier(-1):
         supply_val = 200
-    elif p_sys_id in ColonisationAI.annexable_ring2:
+    elif p_sys_id in UniverseUtilsAI.get_systems_by_supply_tier(-2):
         supply_val = 300
-    elif p_sys_id in ColonisationAI.annexable_ring3:
+    elif p_sys_id in UniverseUtilsAI.get_systems_by_supply_tier(-3):
         supply_val = 400
     if max_path_threat > 0.5 * mil_ship_rating:
         if max_path_threat < 3 * mil_ship_rating:

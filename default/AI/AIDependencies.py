@@ -25,8 +25,7 @@ supply_by_size = {fo.planetSize.tiny: 2,
                   fo.planetSize.huge: -2,
                   fo.planetSize.gasGiant: -1
                   }
-
-SUPPLY_MOD_SPECIALS = {'WORLDTREE_SPECIAL':{-1:1}}
+SUPPLY_MOD_SPECIALS = {'WORLDTREE_SPECIAL': {-1: 1}}
 
 # building supply bonuses are keyed by planet size; key -1 stands for any planet size
 building_supply = {"BLD_IMPERIAL_PALACE": {-1: 2},
@@ -39,6 +38,9 @@ building_supply = {"BLD_IMPERIAL_PALACE": {-1: 2},
                                           fo.planetSize.gasGiant: 4,
                                           },
                    }
+
+species_supply_range_modifier = {'BAD': 0, 'GREAT': 2, 'ULTIMATE': 3}
+
 
 PRO_ORBITAL_GEN = "PRO_ORBITAL_GEN"
 PRO_SOL_ORB_GEN = "PRO_SOL_ORB_GEN"

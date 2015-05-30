@@ -7,12 +7,13 @@ import AIstate
 import FleetUtilsAI
 import FreeOrionAI as foAI
 import PlanetUtilsAI
+import UniverseUtilsAI
 import ProductionAI
 import TechsListsAI
 import MilitaryAI
 from EnumsAI import AIFleetMissionType, AIExplorableSystemType, TargetType, AIFocusType
 import EnumsAI
-from freeorion_tools import dict_from_map, tech_is_complete, get_ai_tag_grade, ppstring, cache_by_turn
+from freeorion_tools import dict_from_map, tech_is_complete, get_ai_tag_grade, ppstring
 from freeorion_debug import Timer
 
 colonization_timer = Timer('getColonyFleets()')
@@ -28,13 +29,7 @@ available_growth_specials = {}
 empire_planets_with_growth_specials = {}
 active_growth_specials = {}
 empire_metabolisms = {}
-annexable_system_ids = set()
-annexable_ring1 = set()
-annexable_ring2 = set()
-annexable_ring3 = set()
-annexable_planet_ids = set()
-systems_by_supply_tier = {}
-system_supply = {}
+# annexable_system_ids_old = {}  # indexed by supply distance, contains sets of system Ids that are annexable
 planet_supply_cache = {}  # includes system supply
 all_colony_opportunities = {}
 gotRuins = False
@@ -74,27 +69,26 @@ NEST_VAL_MAP = {
     "JUGGERNAUT_NEST_SPECIAL": 80,
 }
 
-AVG_PILOT_RATING = 2.0
-GOOD_PILOT_RATING = 4.0
-GREAT_PILOT_RATING = 6.0
-ULT_PILOT_RATING = 12.0
-
-
-def galaxy_is_sparse():
-    setup_data = fo.getGalaxySetupData()
-    avg_empire_systems = setup_data.size / len(fo.allEmpireIDs())
-    return ((setup_data.monsterFrequency <= fo.galaxySetupOption.low) and
-            ((avg_empire_systems >= 40) or
-             ((avg_empire_systems >= 35) and (setup_data.shape != fo.galaxyShape.elliptical))))
+pilot_grades_rating = {"NO": 1e-8, "BAD": 0.75, "AVG": 2.0, "GOOD": 4.0, "GREAT": 6.0, "ULTIMATE": 12.0}
 
 
 def rate_piloting_tag(tag_list):
-    grades = {'NO': 1e-8, 'BAD': 0.75, 'GOOD': GOOD_PILOT_RATING, 'GREAT': GREAT_PILOT_RATING,
-              'ULTIMATE': ULT_PILOT_RATING}
-    return grades.get(get_ai_tag_grade(tag_list, "WEAPONS"), 1.0)
+    """Rate the piloting tag.
+
+    :param tag_list:
+    :rtype: float
+    """
+    return pilot_grades_rating.get(get_ai_tag_grade(tag_list, "WEAPONS"), 1.0)
 
 
 def rate_planetary_piloting(pid):
+    """Rate the piloting ability of the species on the passed planet.
+
+    :param pid: ID of the planet to be evaluated
+    :type pid: int
+    :return: Pilot rating of inhabiting species or 0.0 if no species / invalid planet.
+    :rtype: float
+    """
     universe = fo.getUniverse()
     planet = universe.getPlanet(pid)
     if not planet or not planet.speciesName:
@@ -104,104 +98,14 @@ def rate_planetary_piloting(pid):
         return 0.0
     return rate_piloting_tag(this_spec.tags)
 
-@cache_by_turn
-def get_supply_tech_range():
-    return sum( _range for _tech, _range in AIDependencies.supply_range_techs.iteritems() if tech_is_complete(_tech))
-
-def check_supply():
-    # get suppliable systems and planets
-    colonization_timer.start('Getting Empire Supply Info')
-    universe = fo.getUniverse()
-    empire = fo.getEmpire()
-    empire_id = empire.empireID
-    fleet_suppliable_system_ids = empire.fleetSupplyableSystemIDs
-    fleet_suppliable_planet_ids = PlanetUtilsAI.get_planets_in__systems_ids(fleet_suppliable_system_ids)
-    print
-    print "    fleet_suppliable_system_ids: %s" % list(fleet_suppliable_system_ids)
-    print "    fleet_suppliable_planet_ids: %s" % fleet_suppliable_planet_ids
-    print
-
-    print "-------\nEmpire Obstructed Starlanes:"
-    print list(empire.obstructedStarlanes())
-    colonization_timer.start('Determining Annexable Systems')
-
-    annexable_system_ids.clear()  # TODO: distinguish colony-annexable systems and outpost-annexable systems
-    annexable_ring1.clear()
-    annexable_ring2.clear()
-    annexable_ring3.clear()
-    annexable_planet_ids.clear()
-    systems_by_supply_tier.clear()
-    system_supply.clear()
-    supply_distance = get_supply_tech_range()
-    # extra potential supply contributions:
-    # 3 for up to Ultimate supply species
-    # 2 for possible tiny planets
-    # 1 for World Tree
-    # TODO: +3 to consider capturing planets with Elevators
-    supply_distance += 6
-    # if foAI.foAIstate.aggression >= fo.aggression.aggressive:
-    # supply_distance += 1
-    for sys_id in empire.fleetSupplyableSystemIDs:
-        annexable_system_ids.add(sys_id)  # add fleet suppliable system
-        for nID in universe.getImmediateNeighbors(sys_id, empire_id):
-            annexable_system_ids.add(nID)  # add immediate neighbor of fleet suppliable system
-    if supply_distance > 1:
-        for sys_id in list(annexable_system_ids):
-            for nID in universe.getImmediateNeighbors(sys_id, empire_id):
-                annexable_ring1.add(nID)
-        annexable_ring1.difference_update(annexable_system_ids)
-        annexable_system_ids.update(annexable_ring1)
-    if supply_distance > 2:
-        for sys_id in list(annexable_ring1):
-            for nID in universe.getImmediateNeighbors(sys_id, empire_id):
-                annexable_ring2.add(nID)
-        annexable_ring2.difference_update(annexable_system_ids)
-        annexable_system_ids.update(annexable_ring2)
-    if supply_distance > 3:
-        for sys_id in list(annexable_ring2):
-            for nID in universe.getImmediateNeighbors(sys_id, empire_id):
-                annexable_ring3.add(nID)
-        annexable_ring3.difference_update(annexable_system_ids)
-        annexable_system_ids.update(annexable_ring3)
-    annexable_planet_ids.update(PlanetUtilsAI.get_planets_in__systems_ids(annexable_system_ids))
-    print "First Ring of annexable systems:", ppstring(PlanetUtilsAI.sys_name_ids(annexable_ring1))
-    print "Second Ring of annexable systems:", ppstring(PlanetUtilsAI.sys_name_ids(annexable_ring2))
-    print "Third Ring of annexable systems:", ppstring(PlanetUtilsAI.sys_name_ids(annexable_ring3))
-    # print "standard supply calc took ", supp_timing[0][-1]-supp_timing[0][-2]
-    print
-    print "New Supply Calc:"
-    print "Known Systems:", list(universe.systemIDs)
-    print "Base Supply:", dict_from_map(empire.systemSupplyRanges)
-    # Note: empire.supplyProjections supply projection has one major difference from standard supply calculations-- if
-    # the final parameter (obstructed) is False then it intentionally ignores existing obstructions/blockades, so
-    # a Sentinel or somesuch might throw it off, That is an area for future improvement
-    system_supply.update(empire.supplyProjections(-1-supply_distance, False))
-    for sys_id, supply_val in system_supply.items():
-        # print PlanetUtilsAI.sys_name_ids([sys_id]), ' -- ', supply_val
-        systems_by_supply_tier.setdefault(min(0, supply_val), []).append(sys_id)
-    print "New Supply connected systems: ", ppstring(PlanetUtilsAI.sys_name_ids(systems_by_supply_tier.get(0, [])))
-    print "New First Ring of annexable systems: ", ppstring(PlanetUtilsAI.sys_name_ids(systems_by_supply_tier.get(-1, [])))
-    print "New Second Ring of annexable systems: ", ppstring(PlanetUtilsAI.sys_name_ids(systems_by_supply_tier.get(-2, [])))
-    print "New Third Ring of annexable systems: ", ppstring(PlanetUtilsAI.sys_name_ids(systems_by_supply_tier.get(-3, [])))
-    # print "new supply calc took ", new_time-supp_timing[0][-1]
-    annexable_system_ids.clear()  # TODO: distinguish colony-annexable systems and outpost-annexable systems
-    annexable_ring1.clear()
-    annexable_ring2.clear()
-    annexable_ring3.clear()
-    annexable_ring1.update(systems_by_supply_tier.get(-1, []))
-    annexable_ring2.update(systems_by_supply_tier.get(-2, []))
-    annexable_ring3.update(systems_by_supply_tier.get(-3, []))
-    # annexableSystemIDs.update(systems_by_supply_tier.get(0, []), annexableRing1, annexableRing2, annexableRing3)
-    for jumps in range(0, -1 - supply_distance, -1):
-        annexable_system_ids.update(systems_by_supply_tier.get(jumps, []))
-    colonization_timer.stop()
-    return fleet_suppliable_planet_ids
-
 
 def survey_universe():
     global gotRuins, got_ast, got_gg, cur_best_pilot_rating, curMidPilotRating
     univ_stats = {}
-    fleet_suppliable_planet_ids = check_supply()
+    colonization_timer.start('Getting Empire Supply Info')
+    fleet_suppliable_planet_ids = UniverseUtilsAI.check_supply()
+    colonization_timer.stop()
+    # update_annexable_systems()
     colonization_timer.start("Categorizing Visible Planets")
     univ_stats['fleetSupplyablePlanetIDs'] = fleet_suppliable_planet_ids
     universe = fo.getUniverse()
@@ -756,7 +660,7 @@ def evaluate_planet(planet_id, mission_type, spec_name, empire, detail=None):
     system = universe.getSystem(this_sysid)
     sys_status = foAI.foAIstate.systemStatus.get(this_sysid, {})
 
-    sys_supply = system_supply.get(this_sysid, -99)
+    sys_supply = UniverseUtilsAI.get_system_supply().get(this_sysid, -99)
     planet_supply = AIDependencies.supply_by_size.get(int(planet_size), 0)
     bld_types = set(universe.getObject(bldg).buildingTypeName for bldg in planet.buildingIDs).intersection(
         AIDependencies.building_supply)
@@ -770,7 +674,7 @@ def evaluate_planet(planet_id, mission_type, spec_name, empire, detail=None):
     ind_tag_mod = common_grades.get(get_ai_tag_grade(tag_list, "INDUSTRY"), 1.0)
     res_tag_mod = common_grades.get(get_ai_tag_grade(tag_list, "RESEARCH"), 1.0)
     pop_tag_mod = {'BAD': 0.75, 'GOOD': 1.25}.get(get_ai_tag_grade(tag_list, "POPULATION"), 1.0)
-    supply_tag_mod = {'BAD': 0, 'GREAT': 2, 'ULTIMATE': 3}.get(get_ai_tag_grade(tag_list, "SUPPLY"), 1)
+    supply_tag_mod = AIDependencies.species_supply_range_modifier.get(get_ai_tag_grade(tag_list, "SUPPLY"), 1)
 
     # determine the potential supply provided by owning this planet, and if the planet is currently populated by
     # the evaluated species, then save this supply value in a cache.

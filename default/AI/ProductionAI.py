@@ -464,19 +464,19 @@ def generateProductionOrders():
             res=fo.issueRequeueProductionOrder(productionQueue.size -1, 0) # move to front
             print "Requeueing Acirema BLD_SHIPYARD_BASE to front of build queue, with result %d"% res
 
-    top_pilot_systems={}
-    for pid, rating in ColonisationAI.pilot_ratings.items() :
-        if (rating <= ColonisationAI.curMidPilotRating) and (rating < ColonisationAI.GREAT_PILOT_RATING):
+    top_pilot_systems = {}
+    for pid, rating in ColonisationAI.pilot_ratings.items():
+        if (rating <= ColonisationAI.curMidPilotRating) and (rating < ColonisationAI.pilot_grades_rating["GREAT"]):
             continue
-        top_pilot_systems.setdefault( universe.getPlanet(pid).systemID, [] ).append( (pid, rating) )
-        if (pid in queuedShipyardLocs ) or not bldType.canBeProduced(empire.empireID, pid) :
-            continue #but not 'break' because we want to build shipyards all top pilot planets
-        res=fo.issueEnqueueBuildingProductionOrder("BLD_SHIPYARD_BASE", pid)
-        print "Enqueueing BLD_SHIPYARD_BASE at planet %d (%s) for top pilot, with result %d"%(pid, universe.getPlanet(pid).name, res)
+        top_pilot_systems.setdefault(universe.getPlanet(pid).systemID, []).append((pid, rating))
+        if (pid in queuedShipyardLocs) or not bldType.canBeProduced(empire.empireID, pid):
+            continue  # but not 'break' because we want to build shipyards all top pilot planets
+        res = fo.issueEnqueueBuildingProductionOrder("BLD_SHIPYARD_BASE", pid)
+        print "Enqueueing BLD_SHIPYARD_BASE at planet %d (%s) for top pilot, with result %d" % (pid, universe.getPlanet(pid).name, res)
         if res:
             queuedShipyardLocs.append(pid)
-            res=fo.issueRequeueProductionOrder(productionQueue.size -1, 0) # move to front
-            print "Requeueing BLD_SHIPYARD_BASE to front of build queue, with result %d"% res
+            res = fo.issueRequeueProductionOrder(productionQueue.size-1, 0)  # move to front
+            print "Requeueing BLD_SHIPYARD_BASE to front of build queue, with result %d" % res
 
     popCtrs = list(AIstate.popCtrIDs)
     enrgyShipyardLocs={}
