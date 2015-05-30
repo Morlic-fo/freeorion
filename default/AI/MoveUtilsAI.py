@@ -76,7 +76,7 @@ def can_travel_to_system(fleet_id, from_system_target, to_system_target, ensure_
                 target_sys_id in fleet_supplyable_system_ids and len(unsupplied_stops) <= fuel or
                 target_sys_id in UniverseUtilsAI.get_systems_by_supply_tier(-1) and len(unsupplied_stops) < fuel or
                 foAI.foAIstate.aggression >= fo.aggression.typical and target_sys_id in UniverseUtilsAI.get_systems_by_supply_tier(-2) and len(unsupplied_stops) < fuel - 1 or
-                foAI.foAIstate.aggression >= fo.aggression.aggressive and target_sys_id in UniverseUtilsAI.get_systems_by_supply_tier(-2) and len(unsupplied_stops) < fuel - 2):
+                foAI.foAIstate.aggression >= fo.aggression.aggressive and target_sys_id in UniverseUtilsAI.get_systems_by_supply_tier(-3) and len(unsupplied_stops) < fuel - 2):
         return [AITarget.AITarget(TargetType.TARGET_SYSTEM, sid) for sid in short_path]
     else:
         #print " getting path from 'can_travel_to_system_and_return_to_resupply' ",
