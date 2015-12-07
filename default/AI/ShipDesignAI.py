@@ -77,6 +77,10 @@ TESTDESIGN_PREFERRED_HULL = "SH_BASIC_MEDIUM"
 MISSING_REQUIREMENT_MULTIPLIER = -1000
 INVALID_DESIGN_RATING = -999  # this needs to be negative but greater than MISSING_REQUIREMENT_MULTIPLIER
 
+
+WITH_UPKEEP = 'with upkeep'
+WITHOUT_UPKEEP = 'without outkeep'
+
 # Potentially, not adding techs to AIDependencies is intended for testing purposes.
 # Therefore, chat the player only once to inform him about the issue to prevent spam.
 __raised_warnings = []
@@ -201,7 +205,7 @@ class ShipDesignCache(object):
             print classname
             cache_name = self.best_designs[classname]
             for consider_fleet in cache_name:
-                print 4*" ", "Consider fleet upkeep:", consider_fleet
+                print 4*" ", consider_fleet
                 cache_upkeep = cache_name[consider_fleet]
                 for req_tuple in cache_upkeep:
                     print 8*" ", req_tuple
@@ -1052,7 +1056,7 @@ class ShipDesigner(object):
 
         # TODO: Rework caching to only cache raw stats of designs, then evaluate them
         design_cache_class = Cache.best_designs.setdefault(self.__class__.__name__, {})
-        design_cache_fleet_upkeep = design_cache_class.setdefault(consider_fleet_count, {})
+        design_cache_fleet_upkeep = design_cache_class.setdefault(WITH_UPKEEP if consider_fleet_count else WITHOUT_UPKEEP, {})
         req_tuple = self.additional_specifications.convert_to_tuple()
         design_cache_reqs = design_cache_fleet_upkeep.setdefault(req_tuple, {})
         universe = fo.getUniverse()
