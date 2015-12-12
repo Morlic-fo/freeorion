@@ -111,6 +111,7 @@ class AIstate(object):
         self.empire_standard_fighter = (4, ((4, 1),), 0.0, 10.0)
         self.empire_standard_enemy = (4, ((4, 1),), 0.0, 10.0)  # TODO: track on a per-empire basis
         self.empire_standard_enemy_rating = 40  # TODO: track on a per-empire basis
+        self.production_queue_manager = ProductionAI.ProductionQueueManager()
 
     def generate_uid(self, first=False):
         """

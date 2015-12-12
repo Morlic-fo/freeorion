@@ -663,7 +663,8 @@ def get_colony_fleets():
                 else:
                     continue
             # print "selecting ", PlanetUtilsAI.planet_name_ids([pid]), " to build Orbital Defenses"
-            retval = fo.issueEnqueueShipProductionOrder(best_ship, loc)
+            retval = foAI.foAIstate.production_queue_manager.enqueue_item(EnumsAI.AIEmpireProductionTypes.BT_SHIP,
+                                                                        best_ship, loc, ProductionAI.PRIORITY_SHIP_ORBITAL_OUTPOST)
             print "Enqueueing Outpost Base at %s for %s with result %s" % (
                 PlanetUtilsAI.planet_name_ids([loc]), PlanetUtilsAI.planet_name_ids([pid]), retval)
             if retval:

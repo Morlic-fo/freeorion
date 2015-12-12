@@ -146,14 +146,15 @@ def get_invasion_fleets():
                 continue
             n_bases = math.ceil((p_troops+1) / troops_per_ship)  # TODO: reconsider this +1 safety factor
             print "Invasion base planning, need %d troops at %d pership, will build %d ships." % ((p_troops+1), troops_per_ship, n_bases)
-            retval = fo.issueEnqueueShipProductionOrder(best_ship, loc)
+            for i in xrange(0,int(n_bases)):
+                retval = foAI.foAIstate.production_queue_manager.enqueue_item(EnumsAI.AIEmpireProductionTypes.BT_SHIP,
+                                                                        best_ship, loc, ProductionAI.PRIORITY_SHIP_ORBITAL_TROOPS)
+
             print "Enqueueing %d Troop Bases at %s for %s" % (n_bases, PlanetUtilsAI.planet_name_ids([loc]), PlanetUtilsAI.planet_name_ids([pid]))
             if retval != 0:
                 all_invasion_targeted_system_ids.add(planet.systemID)
                 reserved_troop_base_targets.append(pid)
                 foAI.foAIstate.qualifyingTroopBaseTargets[pid][1] = loc
-                fo.issueChangeProductionQuantityOrder(empire.productionQueue.size - 1, 1, int(n_bases))
-                fo.issueRequeueProductionOrder(empire.productionQueue.size - 1, 0)
 
     invasion_timer.start("evaluating target planets")
     # TODO: check if any invasion_targeted_planet_ids need more troops assigned
