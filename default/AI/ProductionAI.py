@@ -34,11 +34,7 @@ PRIORITY_SHIP_TROOPS = 5
 PRIORITY_SHIP_ORBITAL_OUTPOST = 6
 PRIORITY_SHIP_ORBITAL_COLO = 7
 PRIORITY_SHIP_ORBITAL_TROOPS = 8
-
-
-
-
-
+PRIORITY_INVALID = -999  # large negative number to ensure to be at the end of the list
 
 best_military_design_rating_cache = {}  # indexed by turn, values are rating of the military design of the turn
 design_cost_cache = {0: {(-1, -1): 0}} # outer dict indexed by cur_turn (currently only one turn kept); inner dict indexed by (design_id, pid)
@@ -1365,6 +1361,7 @@ def generateProductionOrders():
         print
     fo.updateProductionQueue()
 
+
 def build_ship_facilities(bld_name, best_pilot_facilities, top_locs=None):
     if top_locs is None:
         top_locs = []
@@ -1415,6 +1412,7 @@ def build_ship_facilities(bld_name, best_pilot_facilities, top_locs=None):
             num_queued += 1
             already_covered.extend(AIstate.colonizedSystems[universe.getPlanet(pid).systemID])
 
+
 def getAvailableBuildLocations(shipDesignID):
     """returns locations where shipDesign can be built"""
     result = []
@@ -1435,9 +1433,6 @@ def getAvailableBuildLocations(shipDesignID):
 def spentPP():
     """calculate PPs spent this turn so far"""
     return fo.getEmpire().productionQueue.totalSpent
-
-
-INVALID_PRIORITY = -999  # large negative number to ensure to be at the end of the list
 
 
 class ProductionQueueManager(object):
@@ -1563,9 +1558,6 @@ class ProductionQueueManager(object):
         :param item_tuple:
         :return:
         """
-        new_entry = tuple([INVALID_PRIORITY - self._number_of_invalid_priorities, item_tuple[1:]])  # give invalid priority marking it is at the end of the queue
+        new_entry = tuple([PRIORITY_INVALID - self._number_of_invalid_priorities, item_tuple[1:]])  # give invalid priority marking it is at the end of the queue
         self._number_of_invalid_priorities += 1
         self._production_queue.append(new_entry)  # list is no longer sorted by priority
-
-
-
