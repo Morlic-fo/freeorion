@@ -155,7 +155,7 @@ def get_best_ship_info(priority, loc=None):
         best_designs = design_cache[priority]
         if not best_designs:
             return None, None, None
-
+        top_rating = top_id = None
         for design_stats in best_designs:
             top_rating, pid, top_id, cost = design_stats
             if pid in planet_ids:
