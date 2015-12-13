@@ -1364,34 +1364,47 @@ def generateProductionOrders():
 
 
 def build_ship_facilities(bld_name, best_pilot_facilities, top_locs=None):
-    if top_locs is None:
-        top_locs = []
-    universe = fo.getUniverse()
+    """Build specified ship facility at suitable locations if criteria are met.
+
+    :param bld_name: Ship facility to be built
+    :type bld_name: str
+    :param best_pilot_facilities: As specified by ColonisationAI.facilities_by_species_grade
+    :type best_pilot_facilities: dict
+    :param top_locs: prefered locations for building
+    :type top_locs: list | None
+    """
+    # first, check early return conditions
     empire = fo.getEmpire()
-    total_pp = empire.productionPoints
-    min_aggr, prereq_bldg, this_cost, time = AIDependencies.SHIP_FACILITIES.get(bld_name, (None,'',-1,-1))
-    if min_aggr is None or min_aggr > foAI.foAIstate.aggression:
-        return
-    bld_type = fo.getBuildingType(bld_name)
     if not empire.buildingTypeAvailable(bld_name):
         return
-    queued_bld_locs = [element.locationID for element in empire.productionQueue if element.name==bld_name]
+
+    min_aggr, prereq_bldg, this_cost, turns_to_finish = AIDependencies.SHIP_FACILITIES.get(bld_name, (None, '', -1, -1))
+    if min_aggr is None or min_aggr > foAI.foAIstate.aggression:
+        return
+
+    if top_locs is None:
+        top_locs = []
+    bld_type = fo.getBuildingType(bld_name)
+    total_pp = empire.productionPoints
+    universe = fo.getUniverse()
+    queued_bld_locs = [element.locationID for element in empire.productionQueue if element.name == bld_name]
+
     if bld_name in AIDependencies.SYSTEM_SHIP_FACILITIES:
         current_locs = ColonisationAI.system_facilities.get(bld_name, {}).get('systems', set())
         current_coverage = current_locs.union(universe.getPlanet(planet_id).systemID for planet_id in queued_bld_locs)
         open_systems = set(universe.getPlanet(pid).systemID
-                            for pid in best_pilot_facilities.get("BLD_SHIPYARD_BASE",[])).difference(current_coverage)
+                           for pid in best_pilot_facilities.get("BLD_SHIPYARD_BASE", [])).difference(current_coverage)
         try_systems = open_systems.intersection(ColonisationAI.system_facilities.get(
-            prereq_bldg, {}).get('systems', [])) if prereq_bldg  else open_systems
+            prereq_bldg, {}).get('systems', [])) if prereq_bldg else open_systems
         try_locs = set(pid for sys_id in try_systems for pid in AIstate.colonizedSystems.get(sys_id, []))
     else:
-        current_locs = best_pilot_facilities.get(bld_name,[])
-        try_locs = set(best_pilot_facilities.get(prereq_bldg,[])).difference(
+        current_locs = best_pilot_facilities.get(bld_name, [])
+        try_locs = set(best_pilot_facilities.get(prereq_bldg, [])).difference(
             queued_bld_locs, current_locs)
     print "Considering constructing a %s, have %d already built and %d queued" % (
-        bld_name,len(current_locs), len(queued_bld_locs))
-    max_under_construction = max(1, (time * total_pp) // (5 * this_cost))
-    max_total = max(1, (time * total_pp) // (2 * this_cost))
+        bld_name, len(current_locs), len(queued_bld_locs))
+    max_under_construction = max(1, (turns_to_finish * total_pp) // (5 * this_cost))
+    max_total = max(1, (turns_to_finish * total_pp) // (2 * this_cost))
     print "Allowances: max total: %d, max under construction: %d" % (max_total, max_under_construction)
     if len(current_locs) >= max_total:
         return
@@ -1408,7 +1421,7 @@ def build_ship_facilities(bld_name, best_pilot_facilities, top_locs=None):
         if pid in already_covered:
             continue
         res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, pid, PRIORITY_BUILDING_LOW)
-        print "Enqueueing %s at planet %s , with result %d"%(bld_name, universe.getPlanet(pid), res)
+        print "Enqueueing %s at planet %s , with result %d" % (bld_name, universe.getPlanet(pid), res)
         if res:
             num_queued += 1
             already_covered.extend(AIstate.colonizedSystems[universe.getPlanet(pid).systemID])
