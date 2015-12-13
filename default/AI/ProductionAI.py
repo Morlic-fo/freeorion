@@ -222,7 +222,7 @@ def get_best_ship_ratings(loc=None):
 
 
 def generate_production_orders():
-    """generate production orders"""
+    """Generate production orders."""
     # first check ship designs
     # next check for buildings etc that could be placed on queue regardless of locally available PP
     # next loop over resource groups, adding buildings & ships
