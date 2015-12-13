@@ -1595,7 +1595,7 @@ class ProductionQueueManager(object):
         :param item_tuple:
         :return:
         """
-        new_priority = PRIORITY_INVALID - self._number_of_invalid_priorities
+        new_priority = PRIORITY_INVALID + self._number_of_invalid_priorities
         new_entry = tuple([new_priority, new_priority, item_tuple[2:]])  # give invalid priority marking it is at the end of the queue
         self._number_of_invalid_priorities += 1
-        self._production_queue.append(new_entry)  # list is no longer sorted by priority
+        self._production_queue.append(new_entry)
