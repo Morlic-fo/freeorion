@@ -196,7 +196,8 @@ def generateOrders():  # pylint: disable=invalid-name
     foAIstate.report_system_threats()
     print("Calling AI Modules")
     # call AI modules
-    action_list = [ColonisationAI.survey_universe,
+    action_list = [foAIstate.production_queue_manager.update_for_new_turn,
+                   ColonisationAI.survey_universe,
                    ProductionAI.find_best_designs_this_turn,
                    PriorityAI.calculate_priorities,
                    ExplorationAI.assign_scouts_to_explore_systems,

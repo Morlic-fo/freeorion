@@ -226,7 +226,6 @@ def generate_production_orders():
     # first check ship designs
     # next check for buildings etc that could be placed on queue regardless of locally available PP
     # next loop over resource groups, adding buildings & ships
-    foAI.foAIstate.production_queue_manager.update_for_new_turn()
     universe = fo.getUniverse()
     capitol_id = PlanetUtilsAI.get_capital()
     if capitol_id is None or capitol_id == -1:
@@ -1547,11 +1546,6 @@ class ProductionQueueManager(object):
         :return:
         """
 
-        def get_name_of_production_queue_element(elem):
-            """
-            :param elem: element of production queue
-            :return: name of Building or id of ShipDesign of the element"""
-            return elem.designID if elem.buildType == EnumsAI.AIEmpireProductionTypes.BT_SHIP else elem.name
 
         cur_turn = fo.currentTurn()
         if self._last_update == cur_turn:
@@ -1564,7 +1558,7 @@ class ProductionQueueManager(object):
         ingame_production_queue = fo.getEmpire().productionQueue
         ingame_queue_list = []
         for element in ingame_production_queue:
-            ingame_queue_list.append(get_name_of_production_queue_element(element))
+            ingame_queue_list.append(self.get_name_of_production_queue_element(element))
         print "Production queue this turn: ", ingame_queue_list
 
         # Loop over all elements in the ingame_production_queue and try to find a match in self._production_queue.
@@ -1574,13 +1568,19 @@ class ProductionQueueManager(object):
         # TODO: Also, check for newly conquered planets -> unknown entries in production queue...
         self._items_finished_last_turn = []
         for i, element in enumerate(ingame_production_queue):
-            item = get_name_of_production_queue_element(element)
+            item = self.get_name_of_production_queue_element(element)
             while True:
-                (cur_priority, base_priority, item_type, this_item, loc) = self._production_queue[i]
-                if this_item == item and loc == element.locationID:  # item not finished yet, keep in list but update priority
+                try:
+                    (cur_priority, base_priority, item_type, this_item, loc) = self._production_queue[i]
+                    if this_item == item and loc == element.locationID:  # item not finished yet, keep in list but update priority
+                        break
+                    else:  # item was finished in last turn, remove from our queue.
+                        self._items_finished_last_turn.append(self._production_queue.pop(i))
+                except Exception as e:
+                    print element.name, element.locationID
+                    print self._items_finished_last_turn
+                    print_error(e)
                     break
-                else:  # item was finished in last turn, remove from our queue.
-                    self._items_finished_last_turn.append(self._production_queue.pop(i))
         if len(self._production_queue) > len(ingame_production_queue):  # all items were matched, rest must be finished.
             self._items_finished_last_turn.extend(self._production_queue[len(ingame_production_queue):])
             del self._production_queue[len(ingame_production_queue):]
@@ -1602,6 +1602,12 @@ class ProductionQueueManager(object):
             if new_index != idx:  # need to move item
                 fo.issueRequeueProductionOrder(idx, new_index)
         print "New AI-priority-queue: ", self._production_queue, legend
+
+    def get_name_of_production_queue_element(self, elem):
+        """
+        :param elem: element of production queue
+        :return: name of Building or id of ShipDesign of the element"""
+        return elem.designID if elem.buildType == EnumsAI.AIEmpireProductionTypes.BT_SHIP else elem.name
 
     def enqueue_item(self, item_type, item, loc, priority=PRIORITY_DEFAULT):
         """Enqueue item into production queue.
@@ -1647,6 +1653,9 @@ class ProductionQueueManager(object):
         idx = bisect.bisect(self._production_queue, entry)
         self._production_queue.insert(idx, entry)
         if idx == len(self._production_queue) - 1:  # item does not need to be moved in queue
+            print "After enqueuing ", item, ":"
+            print "self._production_queue: ", [tup[3] for tup in self._production_queue]
+            print "real productionQueue: ", [self.get_name_of_production_queue_element(elem) for elem in fo.getEmpire().productionQueue]
             return True
 
         # move item in production queue according to its priority.
@@ -1658,6 +1667,9 @@ class ProductionQueueManager(object):
         if not res:
             print_error("Can not change position of item in production queue.")
             self.__handle_error_on_requeue(self._production_queue.pop(idx))
+        print "After enqueuing ", item, ":"
+        print "self._production_queue: ", [tup[3] for tup in self._production_queue]
+        print "real productionQueue: ", [self.get_name_of_production_queue_element(elem) for elem in fo.getEmpire().productionQueue]
         return True
 
     def dequeue_item_by_index(self, index):
