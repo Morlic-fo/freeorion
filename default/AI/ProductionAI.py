@@ -1433,12 +1433,12 @@ class ProductionQueueManager(object):
     This class should be instanced only once and only by foAI.foAIstate in order to provide save-load functionality!
 
     It is absolutely mandatory that any enqueuing and dequeuing regarding the production queue
-    is handled by this class. I.e., DO NOT CALL
+    is handled by this class. I.e., DO NOT CALL the following functions directy:
         -fo.issueEnqueueBuildingProductionOrder
         -fo.issueEnqueueShipProductionOrder
         -fo.issueRequeueProductionOrder
         -fo.issueDequeueProductionOrder
-    directly but use the dedicated member functions of this class instead.
+    Instead, use the dedicated member functions of this class.
 
     If extending the interface, make sure to always update self._production_queue. Make sure that its content
     is consistent with the ingame production queue (i.e. C++ part of the game) at all times - both item and order.
