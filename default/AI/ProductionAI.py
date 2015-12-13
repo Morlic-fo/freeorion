@@ -20,21 +20,22 @@ import random
 
 BUILDING = EnumsAI.AIEmpireProductionTypes.BT_BUILDING
 SHIP = EnumsAI.AIEmpireProductionTypes.BT_SHIP
-PRIORITY_EMERGENCY_FACTOR = 1e9
-PRIORITY_DEFAULT = 1
-PRIORITY_BUILDING_LOW = 1
-PRIORITY_BUILDING_BASE = 10
-PRIORITY_BUILDING_HIGH = 100
-PRIORITY_SHIP_SCOUT = 1
-PRIORITY_ORBITAL_DEFENSE = 1
-PRIORITY_SHIP_MIL = 2
-PRIORITY_SHIP_OUTPOST = 3
-PRIORITY_SHIP_COLO = 4
-PRIORITY_SHIP_TROOPS = 5
-PRIORITY_SHIP_ORBITAL_OUTPOST = 6
-PRIORITY_SHIP_ORBITAL_COLO = 7
-PRIORITY_SHIP_ORBITAL_TROOPS = 8
-PRIORITY_INVALID = -999  # large negative number to ensure to be at the end of the list
+# lower number means higher priority
+PRIORITY_EMERGENCY_FACTOR = 1e-9
+PRIORITY_DEFAULT = 100
+PRIORITY_BUILDING_LOW = 1000
+PRIORITY_BUILDING_BASE = 100
+PRIORITY_BUILDING_HIGH = 1
+PRIORITY_SHIP_SCOUT = 100
+PRIORITY_ORBITAL_DEFENSE = 90
+PRIORITY_SHIP_MIL = 80
+PRIORITY_SHIP_OUTPOST = 70
+PRIORITY_SHIP_COLO = 60
+PRIORITY_SHIP_TROOPS = 50
+PRIORITY_SHIP_ORBITAL_OUTPOST = 40
+PRIORITY_SHIP_ORBITAL_COLO = 30
+PRIORITY_SHIP_ORBITAL_TROOPS = 20
+PRIORITY_INVALID = 99999  # large number to ensure to be at the end of the list
 
 best_military_design_rating_cache = {}  # indexed by turn, values are rating of the military design of the turn
 design_cost_cache = {0: {(-1, -1): 0}} # outer dict indexed by cur_turn (currently only one turn kept); inner dict indexed by (design_id, pid)
@@ -1436,18 +1437,30 @@ def spentPP():
 
 
 class ProductionQueueManager(object):
+    """This class handles the priority management of the production queue.
+
+    This class should be instanced only once and only by foAI.foAIstate in order to provide save-load functionality!
+
+    It is absolutely mandatory that any enqueuing and dequeuing regarding the production queue
+    is handled by this class. I.e., DO NOT CALL
+        -fo.issueEnqueueBuildingProductionOrder
+        -fo.issueEnqueueShipProductionOrder
+        -fo.issueRequeueProductionOrder
+        -fo.issueDequeueProductionOrder
+    directly but use the dedicated member functions of this class instead.
+
+    If extending the interface, make sure to always update self._production_queue. Make sure that its content
+    is consistent with the ingame production queue (i.e. C++ part of the game) at all times - both item and order.
     """
-    ProductionQueueManager class
-    """
-    # TODO: Write DocString
 
     def __init__(self):
-        self._production_queue = []  # sorted list of (priority, item_type, item, loc) tuples
-        self._items_finished_last_turn = []  # sorted list of (priority, item_type, item, loc) tuples
+        self._production_queue = []  # sorted list of (current_priority, base_priority, item_type, item, loc) tuples
+        self._items_finished_last_turn = []  # sorted list of (current_priority, base_priority, item_type, item, loc) tuples
         self._number_of_invalid_priorities = 0
+        self._last_update = -1
 
     def update_for_new_turn(self):
-        """
+        """Check for completed items and adjust priorities according to production progress.
 
         :return:
         """
@@ -1456,6 +1469,10 @@ class ProductionQueueManager(object):
             :param elem: element of production queue
             :return: name of Building or id of ShipDesign of the element"""
             return elem.designID if elem.buildType == EnumsAI.AIEmpireProductionTypes.BT_SHIP else elem.name
+        cur_turn = fo.currentTurn()
+        if self._last_update == cur_turn:
+            return
+        self._last_update = cur_turn
         print "Checking Production queues:"
         legend = " # (priority, item_type (1=BUILDING, 2=SHIP), item, loc)"
         print "AI-priority-queue last turn: ", self._production_queue, legend
@@ -1466,12 +1483,15 @@ class ProductionQueueManager(object):
             ingame_queue_list.append(get_name_of_production_queue_element(element))
         print "Production queue this turn: ", ingame_queue_list
 
+        # Loop over all elements in the ingame_production_queue and try to find a match in self._production_queue.
+        # As order is preserverd between turns, if items do not match, the corresponding item in self._production_queue
+        # must have been completed last turn. In that case, remove the entry from our list.
         self._items_finished_last_turn = []
         for i, element in enumerate(ingame_production_queue):
             item = get_name_of_production_queue_element(element)
             while True:
-                (priority, _, this_item, loc) = self._production_queue[i]
-                if this_item == item and loc == element.locationID:  # item not finished yet, keep in list
+                (cur_priority, base_priority, item_type, this_item, loc) = self._production_queue[i]
+                if this_item == item and loc == element.locationID:  # item not finished yet, keep in list but update priority
                     break
                 else:  # item was finished in last turn, remove from our queue.
                     self._items_finished_last_turn.append(self._production_queue.pop(i))
@@ -1479,9 +1499,25 @@ class ProductionQueueManager(object):
             self._items_finished_last_turn.extend(self._production_queue[len(ingame_production_queue):])
             del self._production_queue[len(ingame_production_queue):]
         print "Items that were finished in last turn: ", self._items_finished_last_turn
+
+        # update priorities according to production progress and adjust the queue accordingly.
+        # We want to complete started / nearly finished projects first thus scale it with ratio of progress.
+        old_queue = list(self._production_queue)
+        for tup in old_queue:
+            idx = bisect.bisect_left(self._production_queue, tup)  # as we sort self._production_queue, need to search!
+            (old_priority, base_priority, item_type, this_item, loc) = self._production_queue.pop(idx)
+            ingame_production_queue = fo.getEmpire().productionQueue  # make sure to get updated copy
+            element = ingame_production_queue[idx]
+            total_cost, total_turns = fo.getEmpire().productionCostAndTime(element)
+            new_priority = float(base_priority) * (1 - float(element.progress)/float(total_cost))
+            new_entry = (new_priority, base_priority, item_type, this_item, loc)
+            new_index = bisect.bisect_left(self._production_queue, new_entry)
+            self._production_queue.insert(new_index, new_entry)
+            if new_index != idx:  # need to move item
+                fo.issueRequeueProductionOrder(idx, new_index)
         print "New AI-priority-queue: ", self._production_queue, legend
 
-    def enqueue_item(self, item_type, item, loc, priority=0):
+    def enqueue_item(self, item_type, item, loc, priority=PRIORITY_DEFAULT):
         """Enqueue item into production queue.
 
         :param item_type: type of the item to queue: ship or building
@@ -1519,8 +1555,9 @@ class ProductionQueueManager(object):
             return False
 
         # Only now that we are sure to have enqueued the item, we keep track of it in our priority-sorted queue.
-        idx = bisect.bisect(self._production_queue, (priority, item_type, item, loc))
-        self._production_queue.insert(idx, (priority, item_type, item, loc))
+        entry = (priority, priority, item_type, item, loc)
+        idx = bisect.bisect(self._production_queue, entry)
+        self._production_queue.insert(idx, entry)
         if idx == len(self._production_queue)-1:  # item does not need to be moved in queue
             return True
 
@@ -1558,6 +1595,7 @@ class ProductionQueueManager(object):
         :param item_tuple:
         :return:
         """
-        new_entry = tuple([PRIORITY_INVALID - self._number_of_invalid_priorities, item_tuple[1:]])  # give invalid priority marking it is at the end of the queue
+        new_priority = PRIORITY_INVALID - self._number_of_invalid_priorities
+        new_entry = tuple([new_priority, new_priority, item_tuple[2:]])  # give invalid priority marking it is at the end of the queue
         self._number_of_invalid_priorities += 1
         self._production_queue.append(new_entry)  # list is no longer sorted by priority
