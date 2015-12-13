@@ -134,7 +134,15 @@ def cur_best_military_design_rating():
 
 
 def get_best_ship_info(priority, loc=None):
-    """ Returns 3 item tuple: designID, design, buildLocList."""
+    """Get best available ship design and list of build locations.
+
+    :param priority: Type of ship to be built
+    :type priority: EnumsAI.AIPriorityType
+    :param loc: Locations to be queried.
+    :type loc: list | int | None
+    :return: (designID, design, [build_loc_list])
+    :rtype: tuple
+    """
     if loc is None:
         planet_ids = AIstate.popCtrIDs
     elif isinstance(loc, list):
@@ -159,7 +167,13 @@ def get_best_ship_info(priority, loc=None):
 
 
 def get_best_ship_ratings(loc=None):
-    """returns list of [partition, pid, designID, design] sublists, currently only for military ships"""
+    """Get a list of candidates of location and design for military ships.
+
+    :param loc: Locations (planet ids) to be queried
+    :type loc: list | int | None
+    :return: [partition, pid, designID, design]
+    :rtype: list
+    """
     # Since we haven't yet implemented a way to target military ship construction at/near particular locations
     # where they are most in need, and also because our rating system is presumably useful-but-not-perfect, we want to
     # distribute the construction across the Resource Group and across similarly rated designs, preferentially choosing
