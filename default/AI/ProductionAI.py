@@ -1427,28 +1427,6 @@ def build_ship_facilities(bld_name, best_pilot_facilities, top_locs=None):
             already_covered.extend(AIstate.colonizedSystems[universe.getPlanet(pid).systemID])
 
 
-def getAvailableBuildLocations(shipDesignID):
-    """returns locations where shipDesign can be built"""
-    result = []
-    shipDesign = fo.getShipDesign(shipDesignID)
-    empire = fo.getEmpire()
-    empireID = empire.empireID
-    capitolID = PlanetUtilsAI.get_capital()
-    shipyards = set()
-    for yardlist in ColonisationAI.empire_ship_builders.values():
-        shipyards.update(yardlist)
-    shipyards.discard(capitolID)
-    for planetID in [capitolID] + list(shipyards):  # gets capitol at front of list
-        if shipDesign.productionLocationForEmpire(empireID, planetID):
-            result.append(planetID)
-    return result
-
-
-def spentPP():
-    """calculate PPs spent this turn so far"""
-    return fo.getEmpire().productionQueue.totalSpent
-
-
 class ProductionQueueManager(object):
     """This class handles the priority management of the production queue.
 
