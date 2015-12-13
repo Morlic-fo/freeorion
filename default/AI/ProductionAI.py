@@ -1570,6 +1570,8 @@ class ProductionQueueManager(object):
         # Loop over all elements in the ingame_production_queue and try to find a match in self._production_queue.
         # As order is preserverd between turns, if items do not match, the corresponding item in self._production_queue
         # must have been completed last turn. In that case, remove the entry from our list.
+        # TODO: Actually, planets may have been conquered and therefore not on queue?
+        # TODO: Also, check for newly conquered planets -> unknown entries in production queue...
         self._items_finished_last_turn = []
         for i, element in enumerate(ingame_production_queue):
             item = get_name_of_production_queue_element(element)
