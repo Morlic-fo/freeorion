@@ -22,6 +22,7 @@ import PriorityAI
 import ProductionAI
 import ResearchAI
 import ResourcesAI
+import Chokepoints
 from freeorion_tools import UserString, UserStringList, chat_on_error, print_error
 from freeorion_debug import Timer
 
@@ -208,6 +209,7 @@ def generateOrders():  # pylint: disable=invalid-name
                    ResearchAI.generate_research_orders,
                    ProductionAI.generateProductionOrders,
                    ResourcesAI.generate_resources_orders,
+                   Chokepoints.dump_known_universe,
                    foAIstate.after_turn_cleanup,
                    ]
 
