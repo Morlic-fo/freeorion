@@ -1537,6 +1537,8 @@ class ProductionQueueManager(object):
     def __init__(self):
         self._production_queue = []  # sorted list of (current_priority, base_priority, item_type, item, loc) tuples
         self._items_finished_last_turn = []  # sorted list of (current_priority, base_priority, item_type, item, loc) tuples
+        self._items_lost_last_turn = []  # sorted list of (current_priority, base_priority, item_type, item, loc) tuples
+        self._conquered_items_last_turn = []
         self._number_of_invalid_priorities = 0
         self._last_update = -1
 
@@ -1545,8 +1547,6 @@ class ProductionQueueManager(object):
 
         :return:
         """
-
-
         cur_turn = fo.currentTurn()
         if self._last_update == cur_turn:
             return
@@ -1561,19 +1561,33 @@ class ProductionQueueManager(object):
             ingame_queue_list.append(self.get_name_of_production_queue_element(element))
         print "Production queue this turn: ", ingame_queue_list
 
+        lost_planets, gained_planets = _get_change_of_planets()
         # Loop over all elements in the ingame_production_queue and try to find a match in self._production_queue.
         # As order is preserverd between turns, if items do not match, the corresponding item in self._production_queue
         # must have been completed last turn. In that case, remove the entry from our list.
-        # TODO: Actually, planets may have been conquered and therefore not on queue?
-        # TODO: Also, check for newly conquered planets -> unknown entries in production queue...
         self._items_finished_last_turn = []
+        self._items_lost_last_turn = []
+        self._conquered_items_last_turn = []
         for i, element in enumerate(ingame_production_queue):
             item = self.get_name_of_production_queue_element(element)
             while True:
                 try:
+                    if element.locationID in gained_planets:
+                        cur_priority = 0.0
+                        base_priority = 0.0
+                        item_type = (EnumsAI.AIEmpireProductionTypes.BT_BUILDING
+                                     if element.buildType == EnumsAI.AIEmpireProductionTypes.BT_SHIP
+                                     else EnumsAI.AIEmpireProductionTypes.BT_SHIP)
+                        this_item = self.get_name_of_production_queue_element(element)
+                        loc = element.locationID
+                        self._production_queue.insert(i, (cur_priority, base_priority, item_type, this_item, loc))
+                        self._conquered_items_last_turn.append((cur_priority, base_priority, item_type, this_item, loc))
+                        continue  # sort later on TODO: adjust priority based on needs, dequeue etc...
                     (cur_priority, base_priority, item_type, this_item, loc) = self._production_queue[i]
-                    if this_item == item and loc == element.locationID:  # item not finished yet, keep in list but update priority
+                    if this_item == item and loc == element.locationID:  # item not finished yet, keep in list
                         break
+                    elif loc in lost_planets:  # we lost the planet, thus item is no longer in queue, we can remove it.
+                        self._items_lost_last_turn.append(self._production_queue.pop(i))
                     else:  # item was finished in last turn, remove from our queue.
                         self._items_finished_last_turn.append(self._production_queue.pop(i))
                 except Exception as e:
@@ -1581,10 +1595,19 @@ class ProductionQueueManager(object):
                     print self._items_finished_last_turn
                     print_error(e)
                     break
-        if len(self._production_queue) > len(ingame_production_queue):  # all items were matched, rest must be finished.
-            self._items_finished_last_turn.extend(self._production_queue[len(ingame_production_queue):])
-            del self._production_queue[len(ingame_production_queue):]
+
+        # some items in our list may have not been matched yet with items in the ingame-production queue
+        for remaining_item in self._production_queue[len(ingame_production_queue):]:
+            (cur_priority, base_priority, item_type, this_item, loc) = remaining_item
+            if loc in lost_planets:
+                self._items_lost_last_turn.append(remaining_item)
+            else:  # not in queue anymore, planet still in our hands... item must be finished!
+                self._items_finished_last_turn.append(remaining_item)
+        del self._production_queue[len(ingame_production_queue):]
+
         print "Items that were finished in last turn: ", self._items_finished_last_turn
+        print "Items that we were building on planets we lost during last turn: ", self._items_lost_last_turn
+        print "Items that were already queued on planets we conquered last turn: ", self._conquered_items_last_turn
 
         # update priorities according to production progress and adjust the queue accordingly.
         # We want to complete started / nearly finished projects first thus scale it with ratio of progress.
@@ -1703,3 +1726,14 @@ class ProductionQueueManager(object):
             [new_priority, new_priority, item_tuple[2:]])  # give invalid priority marking it is at the end of the queue
         self._number_of_invalid_priorities += 1
         self._production_queue.append(new_entry)
+
+
+def _get_change_of_planets():
+    all_planets = fo.getUniverse().planetIDs
+    currently_owned_planets = set(PlanetUtilsAI.get_owned_planets_by_empire(all_planets))
+    old_outposts = AIstate.outpostIDs
+    old_popctrs = AIstate.popCtrIDs
+    old_owned_planets = set(old_outposts + old_popctrs)
+    newly_gained_planets = currently_owned_planets - old_owned_planets
+    lost_planets = old_owned_planets - currently_owned_planets
+    return tuple(lost_planets), tuple(newly_gained_planets)
