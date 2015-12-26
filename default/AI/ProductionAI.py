@@ -1624,6 +1624,8 @@ class ProductionQueueManager(object):
         :rtype: bool
         """
         # first check which type of item we want to queue to find the right C++ function to call
+
+        print "Trying to enqueue %s at %d" % (item, loc)
         if item_type == EnumsAI.AIEmpireProductionTypes.BT_BUILDING:
             production_order = fo.issueEnqueueBuildingProductionOrder
         elif item_type == EnumsAI.AIEmpireProductionTypes.BT_SHIP:
@@ -1660,6 +1662,7 @@ class ProductionQueueManager(object):
 
         # move item in production queue according to its priority.
         try:
+            print "Trying to move item to correct position..."
             res = fo.issueRequeueProductionOrder(fo.getEmpire().productionQueue.size - 1, idx)  # move to right position
         except Exception as e:
             print_error(e)
