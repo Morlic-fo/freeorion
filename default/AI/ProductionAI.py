@@ -845,22 +845,13 @@ def generate_production_orders():
     bld_name = "BLD_BLACK_HOLE_POW_GEN"
     if empire.buildingTypeAvailable(bld_name) and foAI.foAIstate.aggression > fo.aggression.cautious:
         already_got_one = bld_name in existing_buildings
-        queued_bld_locs = queued_buildings.get(bld_name, [])
-        if (len(AIstate.empireStars.get(fo.starType.blackHole, [])) > 0) and len(
-                queued_bld_locs) == 0 and not already_got_one:  #
+        already_queued_one = bld_name in queued_buildings
+        black_hole_systems = AIstate.empireStars.get(fo.starType.blackHole, [])
+        if black_hole_systems and not (already_got_one or already_queued_one):
             if not homeworld:
-                use_sys = AIstate.empireStars.get(fo.starType.blackHole, [])[0]
+                use_sys = black_hole_systems[0]
             else:
-                distance_map = {}
-                for sys_id in AIstate.empireStars.get(fo.starType.blackHole, []):
-                    if sys_id == -1:
-                        continue
-                    try:
-                        distance_map[sys_id] = universe.jumpDistance(homeworld.systemID, sys_id)
-                    except Exception as e:
-                        print_error(e)
-                use_sys = ([(-1, -1)] + sorted([(dist, sys_id) for sys_id, dist in distance_map.items()]))[:2][-1][
-                    -1]  # kinda messy, but ensures a value
+                use_sys, _ = _get_system_closest_to_target(black_hole_systems, homeworld.systemID)
             if use_sys != -1:
                 use_loc = AIstate.colonizedSystems[use_sys][0]
                 res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, use_loc,
