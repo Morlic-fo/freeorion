@@ -229,18 +229,6 @@ def generate_production_orders():
     # next loop over resource groups, adding buildings & ships
     universe = fo.getUniverse()
 
-    existing_buildings = _get_all_existing_buildings()
-    print "Existing buildings:"
-    for bld_name, locs in existing_buildings.iteritems():
-        print "%s: " % bld_name,
-        print [planet.name for planet in map(universe.getPlanet, locs) if planet]
-
-    queued_buildings = foAI.foAIstate.production_queue_manager.get_all_queued_buildings()
-    print "Enqueued buildings:"
-    for bld_name, locs in queued_buildings.iteritems():
-        print "%s: " % bld_name,
-        print [planet.name for planet in map(universe.getPlanet, locs) if planet]
-
     capitol_id = PlanetUtilsAI.get_capital()
     if capitol_id is None or capitol_id == -1:
         homeworld = None
@@ -252,10 +240,6 @@ def generate_production_orders():
     empire = fo.getEmpire()
     production_queue = empire.productionQueue
     total_pp = empire.productionPoints
-    # prodResPool = empire.getResourcePool(fo.resourceType.industry)
-    # available_pp = dict_from_map(production_queue.availablePP(prodResPool))
-    # allocated_pp = dict_from_map(production_queue.allocatedPP)
-    # objectsWithWastedPP = production_queue.objectsWithWastedPP(prodResPool)
     current_turn = fo.currentTurn()
     print
     print "  Total Available Production Points: " + str(total_pp)
@@ -285,12 +269,25 @@ def generate_production_orders():
 
     bldg_expense = 0.0
     bldg_ratio = [0.4, 0.35, 0.30][fo.empireID() % 3]
-    print "Buildings present on all owned planets:"
-    for pid in list(AIstate.popCtrIDs) + list(AIstate.outpostIDs):
+    print "Buildings on owned planets:"
+    for pid in (AIstate.popCtrIDs + AIstate.outpostIDs):
         planet = universe.getPlanet(pid)
         if planet:
             print "%30s: %s" % (planet.name, [universe.getObject(bldg).name for bldg in planet.buildingIDs])
     print
+
+    existing_buildings = _get_all_existing_buildings()
+    # technically, already printed all buildings but different point of view and to test dict integrity
+    print "Locations of existing buildings:"
+    for bld_name, locs in existing_buildings.iteritems():
+        print "%s: " % bld_name,
+        print [planet.name for planet in map(universe.getPlanet, locs) if planet]
+
+    queued_buildings = foAI.foAIstate.production_queue_manager.get_all_queued_buildings()
+    print "Enqueued buildings:"
+    for bld_name, locs in queued_buildings.iteritems():
+        print "%s: " % bld_name,
+        print [planet.name for planet in map(universe.getPlanet, locs) if planet]
 
     if not homeworld:
         print "if no capitol, no place to build, should get around to capturing or colonizing a new one"  # TODO
