@@ -1991,5 +1991,4 @@ def _calculate_weapon_strength(weapon):
             print "ERROR: Could not retrieve tech %s" % tech
             print "Please update AIDependencies.py! In WEAPON_UPGRADE_DICT enter the correct upgrade tech(s) for %s" % weapon_name
             print_error(e)
-    print "%s, total tech bonus: %d" % (weapon_name, total_tech_bonus)
     return damage + total_tech_bonus
