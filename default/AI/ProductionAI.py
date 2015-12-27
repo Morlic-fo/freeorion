@@ -244,7 +244,7 @@ def generate_production_orders():
     capitol_id = PlanetUtilsAI.get_capital()
     if capitol_id is None or capitol_id == -1:
         homeworld = None
-        capitol_sys_id = None
+        capitol_sys_id = -1
     else:
         homeworld = universe.getPlanet(capitol_id)
         capitol_sys_id = homeworld.systemID
@@ -769,16 +769,7 @@ def generate_production_orders():
                 if not homeworld:
                     use_sys = best_locs[0]  # as good as any
                 else:
-                    distance_map = {}
-                    for sys_id in best_locs:  # want to build close to capitol for defense
-                        if sys_id == -1:
-                            continue
-                        try:
-                            distance_map[sys_id] = universe.jumpDistance(homeworld.systemID, sys_id)
-                        except Exception as e:
-                            print_error(e)
-                    use_sys = ([(-1, -1)] + sorted([(dist, sys_id) for sys_id, dist in distance_map.items()]))[:2][-1][
-                        -1]  # kinda messy, but ensures a value
+                    use_sys, _ = _get_system_closest_to_target(best_locs, capitol_sys_id)
                 if use_sys != -1:
                     use_loc = AIstate.colonizedSystems[use_sys][0]
                     res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, use_loc,
@@ -827,7 +818,7 @@ def generate_production_orders():
             # now check if we need a black hole to build the black hole power generator
             if not already_queued_one and empire.buildingTypeAvailable(black_hole_generator) and not black_hole_systems:
                 print "Considering to build a %s so we can build a %s." % (bld_name, black_hole_generator)
-                use_sys, _ = _get_system_closest_to_target(red_star_systems, homeworld.systemID)
+                use_sys, _ = _get_system_closest_to_target(red_star_systems, capitol_sys_id)
                 if use_sys != -1:
                     use_loc = AIstate.colonizedSystems[use_sys][0]
                     res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, use_loc,
@@ -844,13 +835,14 @@ def generate_production_orders():
             if not homeworld:
                 use_sys = black_hole_systems[0]
             else:
-                use_sys, _ = _get_system_closest_to_target(black_hole_systems, homeworld.systemID)
+                use_sys, _ = _get_system_closest_to_target(black_hole_systems, capitol_sys_id)
             if use_sys != -1:
                 use_loc = AIstate.colonizedSystems[use_sys][0]
                 res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, use_loc,
                                                                            PRIORITY_BUILDING_HIGH)
 
-    unconditional_unique_buildings = [  # list of buildings that are always built if available and none exist
+    # buildings that we always want to build but only once...
+    unconditional_unique_buildings = [
         # (bld_name, priority)
         ("BLD_ENCLAVE_VOID", PRIORITY_BUILDING_HIGH),
         ("BLD_GENOME_BANK", PRIORITY_BUILDING_LOW),
@@ -878,7 +870,7 @@ def generate_production_orders():
             if not homeworld:
                 use_sys = neutron_systems[0]
             else:
-                use_sys, _ = _get_system_closest_to_target(neutron_systems, homeworld.systemID)
+                use_sys, _ = _get_system_closest_to_target(neutron_systems, capitol_sys_id)
             if use_sys != -1:
                 use_loc = AIstate.colonizedSystems[use_sys][0]
                 res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, use_loc,
