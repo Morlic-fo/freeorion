@@ -844,12 +844,8 @@ def generate_production_orders():
 
     bld_name = "BLD_BLACK_HOLE_POW_GEN"
     if empire.buildingTypeAvailable(bld_name) and foAI.foAIstate.aggression > fo.aggression.cautious:
-        already_got_one = False
-        for pid in list(AIstate.popCtrIDs) + list(AIstate.outpostIDs):
-            planet = universe.getPlanet(pid)
-            if planet and bld_name in [bld.buildingTypeName for bld in map(universe.getObject, planet.buildingIDs)]:
-                already_got_one = True
-        queued_bld_locs = [element.locationID for element in production_queue if (element.name == bld_name)]
+        already_got_one = bld_name in existing_buildings
+        queued_bld_locs = queued_buildings.get(bld_name, [])
         if (len(AIstate.empireStars.get(fo.starType.blackHole, [])) > 0) and len(
                 queued_bld_locs) == 0 and not already_got_one:  #
             if not homeworld:
@@ -874,12 +870,8 @@ def generate_production_orders():
 
     bld_name = "BLD_ENCLAVE_VOID"
     if empire.buildingTypeAvailable(bld_name):
-        already_got_one = False
-        for pid in list(AIstate.popCtrIDs) + list(AIstate.outpostIDs):
-            planet = universe.getPlanet(pid)
-            if planet and bld_name in [bld.buildingTypeName for bld in map(universe.getObject, planet.buildingIDs)]:
-                already_got_one = True
-        queued_locs = [element.locationID for element in production_queue if (element.name == bld_name)]
+        already_got_one = bld_name in existing_buildings
+        queued_locs = queued_buildings.get(bld_name, [])
         if len(queued_locs) == 0 and homeworld and not already_got_one:  #
             res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, capitol_id,
                                                                        PRIORITY_BUILDING_HIGH)
@@ -888,12 +880,8 @@ def generate_production_orders():
 
     bld_name = "BLD_GENOME_BANK"
     if empire.buildingTypeAvailable(bld_name):
-        already_got_one = False
-        for pid in list(AIstate.popCtrIDs) + list(AIstate.outpostIDs):
-            planet = universe.getPlanet(pid)
-            if planet and bld_name in [bld.buildingTypeName for bld in map(universe.getObject, planet.buildingIDs)]:
-                already_got_one = True
-        queued_locs = [element.locationID for element in production_queue if (element.name == bld_name)]
+        already_got_one = bld_name in existing_buildings
+        queued_locs = queued_buildings.get(bld_name, [])
         if len(queued_locs) == 0 and homeworld and not already_got_one:  #
             res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, capitol_id,
                                                                        PRIORITY_BUILDING_LOW)
@@ -982,11 +970,7 @@ def generate_production_orders():
         this_spec = planet.speciesName
         safety_margin_met = ((this_spec in ColonisationAI.empire_colonizers and (
             len(ColonisationAI.empire_species.get(this_spec, []) + colony_ship_map.get(this_spec, [])) >= 2)) or (current_pop >= 50))
-        has_camp = False
-        for bldg in planet.buildingIDs:
-            if universe.getObject(bldg).buildingTypeName == bld_name:
-                has_camp = True
-                break
+        has_camp = pid in existing_buildings.get(bld_name, [])
         if pop_disqualified or not safety_margin_met:
             # check even if not aggressive, etc, just in case acquired planet with a ConcCamp on it
             if can_build_camp:
@@ -1008,7 +992,7 @@ def generate_production_orders():
                ):
                 continue  # now that focus setting takes these into account, probably works ok to have conc camp
                
-            queued_bld_locs = [element.locationID for element in production_queue if (element.name == bld_name)]
+            queued_bld_locs = queued_buildings.get(bld_name, [])
             if current_pop < 0.95 * target_pop:  #
                 if verbose_camp:
                     print "Conc Camp disqualified at %s due to pop: current %.1f target: %.1f" % (
@@ -1039,15 +1023,11 @@ def generate_production_orders():
 
     bld_name = "BLD_SCANNING_FACILITY"
     if empire.buildingTypeAvailable(bld_name):
-        queued_locs = [element.locationID for element in production_queue if (element.name == bld_name)]
+        queued_locs = queued_buildings.get(bld_name, [])
+        existing_locs = existing_buildings.get(bld_name, [])
         scanner_locs = {}
-        for pid in list(AIstate.popCtrIDs) + list(AIstate.outpostIDs):
-            planet = universe.getPlanet(pid)
-            if planet:
-                if(pid in queued_locs
-                   or bld_name in [bld.buildingTypeName for bld in map(universe.getObject, planet.buildingIDs)]
-                   ):
-                    scanner_locs[planet.systemID] = True
+        for system_id in PlanetUtilsAI.get_systems(queued_locs + existing_locs):
+            scanner_locs[system_id] = True
         max_scanner_builds = max(1, int(empire.productionPoints / 30))
         for sys_id in AIstate.colonizedSystems:
             if len(queued_locs) >= max_scanner_builds:
@@ -1080,12 +1060,8 @@ def generate_production_orders():
 
     bld_name = "BLD_SHIPYARD_ORBITAL_DRYDOCK"
     if empire.buildingTypeAvailable(bld_name):
-        queued_locs = [element.locationID for element in production_queue if (element.name == bld_name)]
-        queued_sys = set()
-        for pid in queued_locs:
-            dd_planet = universe.getPlanet(pid)
-            if dd_planet:
-                queued_sys.add(dd_planet.systemID)
+        queued_locs = queued_buildings.get(bld_name, [])
+        queued_sys = set(PlanetUtilsAI.get_systems(queued_locs))
         cur_drydoc_sys = set(ColonisationAI.empire_dry_docks.keys()).union(queued_sys)
         covered_drydoc_locs = set()
         for start_set, dest_set in [(cur_drydoc_sys, covered_drydoc_locs),
