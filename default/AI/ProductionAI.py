@@ -356,7 +356,6 @@ def generate_production_orders():
                ):
                 res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, "BLD_INDUSTRY_CENTER",
                                                                            homeworld.id, PRIORITY_BUILDING_HIGH)
-                print "Enqueueing BLD_INDUSTRY_CENTER, with result %d" % res
                 if res:
                     cost, prod_time = empire.productionCostAndTime(production_queue[production_queue.size - 1])
                     bldg_expense += cost / prod_time
@@ -366,7 +365,6 @@ def generate_production_orders():
                ):
                 res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, "BLD_SHIPYARD_BASE",
                                                                            homeworld.id, PRIORITY_BUILDING_LOW)
-                print "Enqueueing BLD_SHIPYARD_BASE, with result %d" % res
 
             for bld_name in ["BLD_SHIPYARD_ORG_ORB_INC"]:
                 if(bld_name in possible_building_types
@@ -376,7 +374,6 @@ def generate_production_orders():
                     try:
                         res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, homeworld.id,
                                                                                    PRIORITY_BUILDING_LOW)
-                        print "Enqueueing %s at capitol, with result %d" % (bld_name, res)
                         if res:
                             cost, prod_time = empire.productionCostAndTime(production_queue[production_queue.size - 1])
                             bldg_expense += cost / prod_time
@@ -389,7 +386,6 @@ def generate_production_orders():
                ):
                 res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, "BLD_IMPERIAL_PALACE",
                                                                            homeworld.id, PRIORITY_BUILDING_HIGH)
-                print "Enqueueing BLD_IMPERIAL_PALACE at %s, with result %d" % (homeworld.name, res)
 
             # ok, BLD_NEUTRONIUM_SYNTH is not currently unlockable, but just in case... ;-p
             if("BLD_NEUTRONIUM_SYNTH" in possible_building_types
@@ -397,8 +393,6 @@ def generate_production_orders():
                ):
                 res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, "BLD_NEUTRONIUM_SYNTH",
                                                                            homeworld.id, PRIORITY_BUILDING_LOW)
-                print "Enqueueing BLD_NEUTRONIUM_SYNTH, with result %d" % res
-
             # TODO: add total_pp checks below, so don't overload queue
 
     # best_pilot_locs = sorted([(rating, pid) for pid, rating in ColonisationAI.pilot_ratings.items()
@@ -489,8 +483,6 @@ def generate_production_orders():
                     build_loc = pids[-1]
                     res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, "BLD_SHIPYARD_BASE", build_loc,
                                                                                PRIORITY_BUILDING_LOW)
-                    print "Enqueueing BLD_SHIPYARD_BASE at planet %d (%s) for colonizer species %s, with result %d" % (
-                        build_loc, universe.getPlanet(build_loc).name, specName, res)
                     if res:
                         queued_shipyard_locs.append(build_loc)
                         break  # only start at most one new shipyard per species per turn
@@ -507,8 +499,6 @@ def generate_production_orders():
             continue  # but not 'break' because we want to build shipyards at *every* Acirema planet
         res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, "BLD_SHIPYARD_BASE", pid,
                                                                    PRIORITY_BUILDING_LOW)
-        print "Enqueueing BLD_SHIPYARD_BASE at planet %d (%s) for Acirema, with result %d" % (
-            pid, universe.getPlanet(pid).name, res)
         if res:
             queued_shipyard_locs.append(pid)
 
@@ -521,8 +511,6 @@ def generate_production_orders():
             continue  # but not 'break' because we want to build shipyards all top pilot planets
         res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, "BLD_SHIPYARD_BASE", pid,
                                                                    PRIORITY_BUILDING_LOW)
-        print "Enqueueing BLD_SHIPYARD_BASE at planet %d (%s) for top pilot, with result %d" % (
-            pid, universe.getPlanet(pid).name, res)
         if res:
             queued_shipyard_locs.append(pid)
 
@@ -555,7 +543,6 @@ def generate_production_orders():
                 if pid not in queued_bld_locs and bld_type.canBeProduced(empire.empireID, pid):
                     res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, pid,
                                                                                PRIORITY_BUILDING_LOW)
-                    print "Enqueueing %s at planet %s, with result %d" % (bld_name, universe.getPlanet(pid).name, res)
                     if _CHAT_DEBUG:
                         chat_human(
                             "Enqueueing %s at planet %s, with result %d" % (bld_name, universe.getPlanet(pid), res))
@@ -577,7 +564,6 @@ def generate_production_orders():
             if bld_type.canBeProduced(empire.empireID, pid):
                 res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, pid,
                                                                            PRIORITY_BUILDING_LOW)
-                print "Enqueueing %s at planet %s, with result %d" % (bld_name, universe.getPlanet(pid), res)
                 if _CHAT_DEBUG:
                     chat_human("Enqueueing %s at planet %s, with result %d" % (bld_name, universe.getPlanet(pid), res))
                 if res:
@@ -597,8 +583,6 @@ def generate_production_orders():
                 if pid not in queued_shipyard_locs and bld_type.canBeProduced(empire.empireID, pid):
                     res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, pid,
                                                                                PRIORITY_BUILDING_LOW)
-                    print "Enqueueing %s at planet %d (%s) , with result %d" % (
-                        bld_name, pid, universe.getPlanet(pid).name, res)
                     if res:
                         queued_shipyard_locs.append(pid)
                         cost, prod_time = empire.productionCostAndTime(production_queue[production_queue.size - 1])
@@ -687,8 +671,6 @@ def generate_production_orders():
                     if shipyard_type.canBeProduced(empire.empireID, pid2):
                         res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, "BLD_SHIPYARD_BASE", pid2,
                                                                                    PRIORITY_BUILDING_LOW)
-                        print "Enqueueing %s at planet %d (%s) to go with Aseroid Processor , with result %d" % (
-                            "BLD_SHIPYARD_BASE", pid2, universe.getPlanet(pid2).name, res)
                         if res:
                             queued_shipyard_locs.append(pid2)
                             cost, prod_time = empire.productionCostAndTime(production_queue[production_queue.size - 1])
@@ -696,8 +678,6 @@ def generate_production_orders():
                 if pid not in queued_bld_locs and bld_type.canBeProduced(empire.empireID, pid):
                     res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, pid,
                                                                                PRIORITY_BUILDING_LOW)
-                    print "Enqueueing %s at planet %d (%s) , with result %d on turn %d" % (
-                        bld_name, pid, universe.getPlanet(pid).name, res, current_turn)
                     if res:
                         new_yard_count += 1
                         queued_bld_locs.append(pid)
@@ -735,8 +715,6 @@ def generate_production_orders():
                             queued_bld_locs.append(pid)
                             cost, prod_time = empire.productionCostAndTime(production_queue[production_queue.size - 1])
                             bldg_expense += cost / prod_time  # production_queue[production_queue.size -1].blocksize *
-                        print "Enqueueing %s at planet %d (%s) , with result %d" % (
-                            bld_name, pid, universe.getPlanet(pid).name, res)
 
     bld_name = "BLD_SOL_ORB_GEN"
     if empire.buildingTypeAvailable(bld_name) and foAI.foAIstate.aggression > fo.aggression.turtle:
@@ -790,8 +768,6 @@ def generate_production_orders():
                     use_loc = AIstate.colonizedSystems[use_sys][0]
                     res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, use_loc,
                                                                                PRIORITY_BUILDING_HIGH)
-                    print "Enqueueing %s at planet %d (%s) , with result %d" % (
-                        bld_name, use_loc, universe.getPlanet(use_loc).name, res)
                     if res:
                         cost, prod_time = empire.productionCostAndTime(production_queue[production_queue.size - 1])
                         bldg_expense += cost / prod_time  # production_queue[production_queue.size -1].blocksize *
@@ -831,7 +807,6 @@ def generate_production_orders():
                     res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, use_loc,
                                                                                PRIORITY_BUILDING_BASE)
                     already_queued_one = True  # even if some error occurs, do not try to build another one...
-                    print "Enqueueing %s at planet %s, with result %d" % (bld_name, universe.getPlanet(use_loc).name, res)
                 else:
                     print "But could not find a suitable location..."
             # now check if we need a black hole to build the black hole power generator
@@ -842,7 +817,6 @@ def generate_production_orders():
                     use_loc = AIstate.colonizedSystems[use_sys][0]
                     res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, use_loc,
                                                                                PRIORITY_BUILDING_HIGH)
-                    print "Enqueueing %s at planet %s, with result %d" % (bld_name, universe.getPlanet(use_loc).name, res)
                 else:
                     print "But could not find a suitable location..."
 
@@ -860,8 +834,6 @@ def generate_production_orders():
                 use_loc = AIstate.colonizedSystems[use_sys][0]
                 res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, use_loc,
                                                                            PRIORITY_BUILDING_HIGH)
-                print "Enqueueing %s at planet %d (%s) , with result %d" % (
-                    bld_name, use_loc, universe.getPlanet(use_loc).name, res)
 
     unconditional_unique_buildings = [  # list of buildings that are always built if available and none exist
         # (bld_name, priority)
@@ -875,8 +847,6 @@ def generate_production_orders():
                 already_queued_one = bld_name in queued_buildings
                 if not (already_got_one or already_queued_one):
                     res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, capitol_id, priority)
-                    print "Enqueueing %s at planet %d (%s), with result %d" % (bld_name, capitol_id,
-                                                                               universe.getPlanet(capitol_id).name, res)
 
     bld_name = "BLD_NEUTRONIUM_EXTRACTOR"
     if empire.buildingTypeAvailable(bld_name):
@@ -898,8 +868,6 @@ def generate_production_orders():
                 use_loc = AIstate.colonizedSystems[use_sys][0]
                 res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, use_loc,
                                                                            PRIORITY_BUILDING_HIGH)
-                print "Enqueueing %s at planet %d (%s), with result %d" % (
-                    bld_name, use_loc, universe.getPlanet(use_loc).name, res)
 
     bld_name = "BLD_SHIPYARD_CON_GEOINT"
     build_ship_facilities(bld_name, best_pilot_facilities)
@@ -991,8 +959,6 @@ def generate_production_orders():
                     res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, pid,
                                                                                PRIORITY_BUILDING_HIGH)
                     built_camp = res
-                    print "Enqueueing %s at planet %d (%s) , with result %d" % (
-                        bld_name, pid, universe.getPlanet(pid).name, res)
                     if res:
                         queued_bld_locs.append(pid)
         if verbose_camp:
@@ -1030,7 +996,6 @@ def generate_production_orders():
                 planet = universe.getPlanet(loc)
                 res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, loc,
                                                                            PRIORITY_BUILDING_LOW)
-                print "Enqueueing %s at planet %d (%s) , with result %d" % (bld_name, loc, planet.name, res)
                 if res:
                     queued_locs.append(planet.systemID)
                     break
@@ -1072,7 +1037,6 @@ def generate_production_orders():
                 planet = universe.getPlanet(pid)
                 res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, pid,
                                                                            PRIORITY_BUILDING_LOW)
-                print "Enqueueing %s at planet %d (%s) , with result %d" % (bld_name, pid, planet.name, res)
                 if res:
                     queued_locs.append(planet.systemID)
                     covered_drydoc_locs.add(planet.systemID)
@@ -1096,7 +1060,6 @@ def generate_production_orders():
         if not (bld_type and bld_type.canBeEnqueued(empire.empireID, pid)):
             continue
         res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, pid, PRIORITY_BUILDING_HIGH)
-        print "Enqueueing %s at planet %d (%s) , with result %d" % (bld_name, pid, planet.name, res)
         if res:
             break
         else:
@@ -1477,7 +1440,6 @@ def build_ship_facilities(bld_name, best_pilot_facilities, top_locs=None):
         if pid in already_covered:
             continue
         res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, pid, PRIORITY_BUILDING_LOW)
-        print "Enqueueing %s at planet %s , with result %d" % (bld_name, universe.getPlanet(pid), res)
         if res:
             num_queued += 1
             already_covered.extend(AIstate.colonizedSystems[universe.getPlanet(pid).systemID])
