@@ -1751,3 +1751,17 @@ def _get_all_existing_buildings():
         for bld_name in [bld.buildingTypeName for bld in map(universe.getObject, planet.buildingIDs)]:
             existing_buildings.setdefault(bld_name, []).append(pid)
     return existing_buildings
+
+
+def _get_system_closest_to_target(system_ids, target_system_id):
+    universe = fo.getUniverse()
+    distances = []
+    for sys_id in system_ids:
+        if sys_id != -1:  # check only valid systems
+            try:
+                distance = universe.jumpDistance(target_system_id, sys_id)
+                distances.append((distance, sys_id))
+            except Exception as e:
+                print_error(e, location="ProductionAI._get_system_closest_to_target")
+    shortest_distance, closest_system = sorted(distances)[0] if distances else (9999, -1)  # -1: invalid system_id
+    return closest_system, shortest_distance
