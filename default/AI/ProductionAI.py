@@ -589,8 +589,23 @@ def generate_production_orders():
                         bldg_expense += cost / prod_time  # production_queue[production_queue.size -1].blocksize *
                         break  # only start one per turn
 
-    for bld_name in ["BLD_SHIPYARD_ORG_ORB_INC"]:
+    shipyard_list = [
+        "BLD_SHIPYARD_CON_GEOINT",
+        "BLD_SHIPYARD_AST_REF",
+        "BLD_SHIPYARD_ORG_ORB_INC",
+        ]
+    for bld_name in shipyard_list:
         build_ship_facilities(bld_name, best_pilot_facilities)
+
+    bld_name = "BLD_NEUTRONIUM_FORGE"
+    priority_facilities = ["BLD_SHIPYARD_ENRG_SOLAR",
+                           "BLD_SHIPYARD_CON_GEOINT",
+                           "BLD_SHIPYARD_AST_REF",
+                           "BLD_SHIPYARD_ENRG_COMP"]
+    # TODO: also cover good troopship locations
+    # not a problem if locs appear multiple times here
+    top_locs = [loc for facil in priority_facilities for loc in best_pilot_facilities.get(facil, [])]
+    build_ship_facilities(bld_name, best_pilot_facilities, top_locs)
 
     # gating by life cycle manipulation helps delay these until they are closer to being worthwhile
     if tech_is_complete(AIDependencies.GRO_LIFE_CYCLE) or empire.researchProgress(AIDependencies.GRO_LIFE_CYCLE) > 0:
@@ -868,24 +883,6 @@ def generate_production_orders():
                 use_loc = AIstate.colonizedSystems[use_sys][0]
                 res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, use_loc,
                                                                            PRIORITY_BUILDING_HIGH)
-
-    bld_name = "BLD_SHIPYARD_CON_GEOINT"
-    build_ship_facilities(bld_name, best_pilot_facilities)
-
-    # with current stats the AI considers Titanic Hull superior to Scattered Asteroid, so don't bother building for now
-    # TODO: uncomment once dynamic assessment of prospective designs is enabled & indicates building is worthwhile
-    bld_name = "BLD_SHIPYARD_AST_REF"
-    build_ship_facilities(bld_name, best_pilot_facilities)
-
-    bld_name = "BLD_NEUTRONIUM_FORGE"
-    priority_facilities = ["BLD_SHIPYARD_ENRG_SOLAR",
-                           "BLD_SHIPYARD_CON_GEOINT",
-                           "BLD_SHIPYARD_AST_REF",
-                           "BLD_SHIPYARD_ENRG_COMP"]
-    # not a problem if locs appear multiple times here
-    # TODO: also cover good troopship locations
-    top_locs = list(loc for facil in priority_facilities for loc in best_pilot_facilities.get(facil, []))
-    build_ship_facilities(bld_name, best_pilot_facilities, top_locs)
 
     colony_ship_map = {}
     for fid in FleetUtilsAI.get_empire_fleet_ids_by_role(EnumsAI.AIFleetMissionType.FLEET_MISSION_COLONISATION):
