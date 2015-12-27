@@ -806,40 +806,43 @@ def generate_production_orders():
             black_hole_systems = AIstate.empireStars.get(fo.starType.blackHole, [])
             black_hole_generator = "BLD_BLACK_HOLE_POW_GEN"
             already_queued_one = False
+            # first, check if we need some black hole to build a solar hull
             if not bh_pilots and red_pilots and "SH_SOLAR" in empire.availableShipHulls:  # TODO: generalize hulls
                 print "Considering to build a %s so we get access to black hole pilots (for solar hulls)." % bld_name
-                loc = -1
+                use_loc = -1
+                # we try to find a location where we have a suitable piloting species in the system
+                # but we also need to make sure that we do not kill of our phototropic species in the system
+                # TODO: Implement scenarios where we allow to kill phototropic species for the greater good.
                 for pid in red_pilots:
-                    try:
-                        system_id = universe.getPlanet(pid).systemID
-                        planets_in_system = PlanetUtilsAI.get_planets_in__systems_ids([system_id])
-                        owned_planets_in_system = PlanetUtilsAI.get_owned_planets_by_empire(planets_in_system)
-                    except Exception as e:
-                        print_error(e)
+                    # find all of our planets in the same system and check for phototropic species
+                    planet = universe.getPlanet(pid)
+                    if not planet:
                         continue
-                    for pid2 in owned_planets_in_system:
-                        planet = universe.getPlanet(pid2)
-                        if planet and planet.speciesName:
-                            species = fo.getSpecies(planet.speciesName)
+                    for pid2 in PlanetUtilsAI.get_empire_planets_in_system(planet.systemID):
+                        planet2 = universe.getPlanet(pid2)
+                        if planet2 and planet2.speciesName:
+                            species = fo.getSpecies(planet2.speciesName)
                             if species and "PHOTOTROPHIC" in species.tags:
                                 break
-                    else:  # no phototrophic species in this system, save to build
-                        loc = pid
+                    else:  # no phototrophic species in this system; safe to create a black hole
+                        use_loc = pid
                         break
-                if loc != -1:
-                    res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, loc, PRIORITY_BUILDING_LOW)
-                    print "Enqueueing %s at planet %s, with result %d" % (bld_name, universe.getPlanet(loc).name, res)
-                    if res:
-                        already_queued_one = True
+                if use_loc != -1:
+                    res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, use_loc,
+                                                                               PRIORITY_BUILDING_BASE)
+                    already_queued_one = True  # even if some error occurs, do not try to build another one...
+                    print "Enqueueing %s at planet %s, with result %d" % (bld_name, universe.getPlanet(use_loc).name, res)
                 else:
                     print "But could not find a suitable location..."
+            # now check if we need a black hole to build the black hole power generator
             if not already_queued_one and empire.buildingTypeAvailable(black_hole_generator) and not black_hole_systems:
                 print "Considering to build a %s so we can build a %s." % (bld_name, black_hole_generator)
                 use_sys, _ = _get_system_closest_to_target(red_star_systems, homeworld.systemID)
                 if use_sys != -1:
                     use_loc = AIstate.colonizedSystems[use_sys][0]
-                    res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, use_loc, PRIORITY_BUILDING_HIGH)
-                    print "Enqueueing %s at planet %d (%s) , with result %d" % (bld_name, use_loc, universe.getPlanet(use_loc).name, res)
+                    res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, use_loc,
+                                                                               PRIORITY_BUILDING_HIGH)
+                    print "Enqueueing %s at planet %s, with result %d" % (bld_name, universe.getPlanet(use_loc).name, res)
                 else:
                     print "But could not find a suitable location..."
 
@@ -919,7 +922,8 @@ def generate_production_orders():
     colony_ship_map = {}
     for fid in FleetUtilsAI.get_empire_fleet_ids_by_role(EnumsAI.AIFleetMissionType.FLEET_MISSION_COLONISATION):
         fleet = universe.getFleet(fid)
-        if not fleet: continue
+        if not fleet:
+            continue
         for shipID in fleet.shipIDs:
             this_ship = universe.getShip(shipID)
             if this_ship and (foAI.foAIstate.get_ship_role(
