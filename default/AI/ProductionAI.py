@@ -868,25 +868,20 @@ def generate_production_orders():
                 print "Enqueueing %s at planet %d (%s) , with result %d" % (
                     bld_name, use_loc, universe.getPlanet(use_loc).name, res)
 
-    bld_name = "BLD_ENCLAVE_VOID"
-    if empire.buildingTypeAvailable(bld_name):
-        already_got_one = bld_name in existing_buildings
-        queued_locs = queued_buildings.get(bld_name, [])
-        if len(queued_locs) == 0 and homeworld and not already_got_one:  #
-            res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, capitol_id,
-                                                                       PRIORITY_BUILDING_HIGH)
-            print "Enqueueing %s at planet %d (%s) , with result %d" % (
-                bld_name, capitol_id, universe.getPlanet(capitol_id).name, res)
-
-    bld_name = "BLD_GENOME_BANK"
-    if empire.buildingTypeAvailable(bld_name):
-        already_got_one = bld_name in existing_buildings
-        queued_locs = queued_buildings.get(bld_name, [])
-        if len(queued_locs) == 0 and homeworld and not already_got_one:  #
-            res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, capitol_id,
-                                                                       PRIORITY_BUILDING_LOW)
-            print "Enqueueing %s at planet %d (%s) , with result %d" % (
-                bld_name, capitol_id, universe.getPlanet(capitol_id).name, res)
+    unconditional_unique_buildings = [  # list of buildings that are always built if available and none exist
+        # (bld_name, priority)
+        ("BLD_ENCLAVE_VOID", PRIORITY_BUILDING_HIGH),
+        ("BLD_GENOME_BANK", PRIORITY_BUILDING_LOW),
+    ]
+    if homeworld:
+        for bld_name, priority in unconditional_unique_buildings:
+            if empire.buildingTypeAvailable(bld_name):
+                already_got_one = bld_name in existing_buildings
+                already_queued_one = bld_name in queued_buildings
+                if not (already_got_one or already_queued_one):
+                    res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, capitol_id, priority)
+                    print "Enqueueing %s at planet %d (%s), with result %d" % (bld_name, capitol_id,
+                                                                               universe.getPlanet(capitol_id).name, res)
 
     bld_name = "BLD_NEUTRONIUM_EXTRACTOR"
     if empire.buildingTypeAvailable(bld_name):
