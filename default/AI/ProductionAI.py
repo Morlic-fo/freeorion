@@ -228,11 +228,19 @@ def generate_production_orders():
     # next check for buildings etc that could be placed on queue regardless of locally available PP
     # next loop over resource groups, adding buildings & ships
     universe = fo.getUniverse()
+
     existing_buildings = _get_all_existing_buildings()
-    print "Existing buildings: "
+    print "Existing buildings:"
     for bld_name, locs in existing_buildings.iteritems():
         print "%s: " % bld_name,
         print [planet.name for planet in map(universe.getPlanet, locs) if planet]
+
+    queued_buildings = foAI.foAIstate.production_queue_manager.get_all_queued_buildings()
+    print "Enqueued buildings:"
+    for bld_name, locs in queued_buildings.iteritems():
+        print "%s: " % bld_name,
+        print [planet.name for planet in map(universe.getPlanet, locs) if planet]
+
     capitol_id = PlanetUtilsAI.get_capital()
     if capitol_id is None or capitol_id == -1:
         homeworld = None
@@ -1731,6 +1739,13 @@ class ProductionQueueManager(object):
             [new_priority, new_priority, item_tuple[2:]])  # give invalid priority marking it is at the end of the queue
         self._number_of_invalid_priorities += 1
         self._production_queue.append(new_entry)
+
+    def get_all_queued_buildings(self):
+        queued_bldgs = {}
+        for (cur_priority, base_priority, item_type, this_item, loc) in self._production_queue:
+            if item_type == EnumsAI.AIEmpireProductionTypes.BT_BUILDING:
+                queued_bldgs.setdefault(this_item, []).append(loc)
+        return queued_bldgs
 
 
 def _get_change_of_planets():
