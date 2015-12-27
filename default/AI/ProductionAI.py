@@ -222,13 +222,220 @@ def get_best_ship_ratings(loc=None):
         return []
 
 
+class BuildingCache(object):
+    """Caches stuff important to buildings..."""
+    existing_buildings = None
+    queued_buildings = None
+    n_production_focus = None
+    n_research_focus = None
+    total_production = None
+
+    def __init__(self):
+        self.update()
+
+    def update(self):
+        """Update the cache."""
+        self.existing_buildings = _get_all_existing_buildings()
+        self.queued_buildings = foAI.foAIstate.production_queue_manager.get_all_queued_buildings()
+        self.n_production_focus, self.n_research_focus = _count_empire_foci()
+        self.total_production = fo.getEmpire().productionPoints
+
+building_cache = BuildingCache()
+
+
+class BuildingManager(object):
+    """Manages the construction of buildings."""
+    name = ""
+    production_cost = 99999
+    production_time = 99999
+    priority = PRIORITY_BUILDING_BASE
+    minimum_aggression = fo.aggression.beginner
+
+    def __init__(self):
+        self.building = fo.getBuildingType(self.name)
+        if not self.building:
+            print "Specified invalid building!"
+        else:
+            empire_id = fo.getEmpireID()
+            capital_id = PlanetUtilsAI.get_capital()
+            self.production_cost = self.building.productionCost(empire_id, capital_id)
+            self.production_time = self.building.productionTime(empire_id, capital_id)
+
+    def make_building_decision(self):
+        """Make a decision if we want to build the building and if so, enqueue it.
+
+         :return: True if we enqueued it, otherwise False
+         :rtype: bool
+        """
+        if self._should_be_built():
+            for loc in self._enqueue_locations():
+                foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, self.name, loc, self.priority)
+
+    def _suitable_locations(self):
+        """Return a list of suitable locations for the building"""
+        raise NotImplementedError
+
+    def _enqueue_locations(self):
+        """Return the enqueue locations for this building.
+
+        :return: planet_ids where to enqueue the building.
+        :rtype: list
+        """
+        raise NotImplementedError
+
+    def _need_another_one(self):
+        """Check if we need another one of this building.
+
+        :return: True if we need another one, otherwise false
+        :rtype: bool
+        """
+        raise NotImplementedError
+
+    def _should_be_built(self):
+        """Return if we want to build this building.
+
+        :return: True if we want to build this somewhere
+        :rtype: bool
+        """
+        if foAI.foAIstate.aggression < self.minimum_aggression:
+            return False
+        if not self._need_another_one():
+            return False
+        if not self._suitable_locations():
+            return False
+        # passed all tests
+        return True
+
+
+class EconomyBoostBuildingManager(BuildingManager):
+    needs_production_focus = False
+    needs_research_focus = False
+    RP_TO_PP_CONVERSION_FACTOR = 2.0
+
+    # overloaded functions
+    def _suitable_locations(self):
+        # default: any populated planet
+        return list(AIstate.popCtrIDs)
+
+    def _enqueue_locations(self):
+        capital_id = PlanetUtilsAI.get_capital()
+        if capital_id != -1:
+            return [capital_id]
+        locs = self._suitable_locations()
+        if locs:
+            return [locs[0]]
+        else:
+            return None
+
+    def _need_another_one(self):
+        # default: Build only once per empire
+        if self.name in building_cache.existing_buildings:
+            return False
+        if self.name in building_cache.queued_buildings:
+            return False
+        return True
+
+    def _should_be_built(self):
+        cost_per_turn = float(self.production_cost)/self.production_time
+        turns_till_payoff = self._estimated_time_to_payoff()
+        if not BuildingManager._should_be_built(self):  # aggression level, need for another one, have locations...
+            return False
+        if self.production_cost > 10*building_cache.total_production:
+            return False
+        if turns_till_payoff < 10 and cost_per_turn < 2*building_cache.total_production:
+            return True
+        if turns_till_payoff < 20 and cost_per_turn < building_cache.total_production:
+            return True
+        if self._estimated_time_to_payoff() < 50 and cost_per_turn < .1*building_cache.total_production:
+            return True
+        return False
+
+    # new function definitions
+    def _production_per_pop(self):
+        """Return production granted per population.
+
+        :return: production per population
+        :rtype: float
+        """
+        return 0.0
+
+    def _flat_production_bonus(self):
+        """Return flat production bonus granted by building.
+
+        :return: flat production bonus granted by building
+        :rtype: float
+        """
+        return 0.0
+
+    def _research_per_pop(self):
+        """Return research granted per population.
+
+        :return:
+        :rtype: float
+        """
+        return 0.0
+
+    def _flat_research_bonus(self):
+        """Return flat research bonus granted by building
+
+        :return:
+        :rtype: float
+        """
+        return 0.0
+
+    def _total_research(self):
+        if self.needs_research_focus:
+            number_of_pop_ctrs = building_cache.n_research_focus
+            relevant_population = ColonisationAI.empire_status['researchers']
+        else:
+            number_of_pop_ctrs = len(AIstate.popCtrIDs)
+            relevant_population = fo.getEmpire().population()
+        return number_of_pop_ctrs*self._flat_research_bonus() + relevant_population*self._research_per_pop()
+
+    def _total_production(self):
+        if self.needs_production_focus:
+            number_of_pop_ctrs = building_cache.n_production_focus
+            relevant_population = ColonisationAI.empire_status['industrialists']
+        else:
+            number_of_pop_ctrs = len(AIstate.popCtrIDs)
+            relevant_population = fo.getEmpire().population()
+        return number_of_pop_ctrs*self._flat_production_bonus() + relevant_population*self._production_per_pop()
+
+    def _estimated_time_to_payoff(self):
+        """Returns an estimation of turns until the building returns payed for itself.
+
+        :return: number of turns until payoff
+        :rtype: float
+        """
+        # TODO: Consider the effects of changing focus
+        total_economy_points = self._total_production() + self._total_research()*self.RP_TO_PP_CONVERSION_FACTOR
+        return float(self.production_cost) / max(total_economy_points, 1e-12)
+
+
+class IndustrialCenterManager(EconomyBoostBuildingManager):
+    """Handles building decisions for the industrial center."""
+    name = "BLD_INDUSTRY_CENTER"
+    needs_production_focus = True
+    priority = PRIORITY_BUILDING_HIGH
+
+    def _production_per_pop(self):
+        if tech_is_complete("PRO_INDUSTRY_CENTER_III"):
+            return 3.0 * AIDependencies.INDUSTRY_PER_POP
+        elif tech_is_complete("PRO_INDUSTRY_CENTER_II"):
+            return 2.0 * AIDependencies.INDUSTRY_PER_POP
+        elif tech_is_complete("PRO_INDUSTRY_CENTER_I"):
+            return 1.0 * AIDependencies.INDUSTRY_PER_POP
+        else:
+            return 0.0
+
+
 def generate_production_orders():
     """Generate production orders."""
     # first check ship designs
     # next check for buildings etc that could be placed on queue regardless of locally available PP
     # next loop over resource groups, adding buildings & ships
     universe = fo.getUniverse()
-
+    building_cache.update()
     capitol_id = PlanetUtilsAI.get_capital()
     if capitol_id is None or capitol_id == -1:
         homeworld = None
@@ -1688,3 +1895,23 @@ def _get_system_closest_to_target(system_ids, target_system_id):
                 print_error(e, location="ProductionAI._get_system_closest_to_target")
     shortest_distance, closest_system = sorted(distances)[0] if distances else (9999, -1)  # -1: invalid system_id
     return closest_system, shortest_distance
+
+
+def _count_empire_foci():
+    """Count current foci settings in empire.
+    :rtype : tuple(int, int)
+    :return: number_of_production_foci, number_of_research_foci
+    """
+    universe = fo.getUniverse()
+    n_production = 0
+    n_research = 0
+    for planet_id in AIstate.popCtrIDs:
+        planet = universe.getPlanet(planet_id)
+        if not planet:
+            continue
+        focus = planet.focus
+        if focus == EnumsAI.AIFocusType.FOCUS_INDUSTRY:
+            n_production += 1
+        elif focus == EnumsAI.AIFocusType.FOCUS_RESEARCH:
+            n_research += 1
+    return n_production, n_research
