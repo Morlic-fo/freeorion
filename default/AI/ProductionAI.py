@@ -222,6 +222,69 @@ def get_best_ship_ratings(loc=None):
         return []
 
 
+def _get_change_of_planets():
+    all_planets = fo.getUniverse().planetIDs
+    currently_owned_planets = set(PlanetUtilsAI.get_owned_planets_by_empire(all_planets))
+    old_outposts = AIstate.outpostIDs
+    old_popctrs = AIstate.popCtrIDs
+    old_owned_planets = set(old_outposts + old_popctrs)
+    newly_gained_planets = currently_owned_planets - old_owned_planets
+    lost_planets = old_owned_planets - currently_owned_planets
+    return tuple(lost_planets), tuple(newly_gained_planets)
+
+
+def _get_all_existing_buildings():
+    """Return all existing buildings in the empire with locations.
+
+    :return: Existing buildings in the empire with locations (planet_ids)
+    :rtype: dict{str: int}
+    """
+    existing_buildings = {}  # keys are building names, entries are planet ids where building stands
+    universe = fo.getUniverse()
+    for pid in set(AIstate.popCtrIDs + AIstate.outpostIDs):
+        planet = universe.getPlanet(pid)
+        if not planet:
+            sys.stderr.write('Can not find planet with id %d' % pid)
+            continue
+        for bld_name in [bld.buildingTypeName for bld in map(universe.getObject, planet.buildingIDs)]:
+            existing_buildings.setdefault(bld_name, []).append(pid)
+    return existing_buildings
+
+
+def _get_system_closest_to_target(system_ids, target_system_id):
+    universe = fo.getUniverse()
+    distances = []
+    for sys_id in system_ids:
+        if sys_id != -1:  # check only valid systems
+            try:
+                distance = universe.jumpDistance(target_system_id, sys_id)
+                distances.append((distance, sys_id))
+            except Exception as e:
+                print_error(e, location="ProductionAI._get_system_closest_to_target")
+    shortest_distance, closest_system = sorted(distances)[0] if distances else (9999, -1)  # -1: invalid system_id
+    return closest_system, shortest_distance
+
+
+def _count_empire_foci():
+    """Count current foci settings in empire.
+    :rtype : tuple(int, int)
+    :return: number_of_production_foci, number_of_research_foci
+    """
+    universe = fo.getUniverse()
+    n_production = 0
+    n_research = 0
+    for planet_id in AIstate.popCtrIDs:
+        planet = universe.getPlanet(planet_id)
+        if not planet:
+            continue
+        focus = planet.focus
+        if focus == EnumsAI.AIFocusType.FOCUS_INDUSTRY:
+            n_production += 1
+        elif focus == EnumsAI.AIFocusType.FOCUS_RESEARCH:
+            n_research += 1
+    return n_production, n_research
+
+
 class BuildingCache(object):
     """Caches stuff important to buildings..."""
     existing_buildings = None
@@ -231,7 +294,7 @@ class BuildingCache(object):
     total_production = None
 
     def __init__(self):
-        self.update()
+        pass  # cant update before imports complete
 
     def update(self):
         """Update the cache."""
@@ -256,7 +319,7 @@ class BuildingManager(object):
         if not self.building:
             print "Specified invalid building!"
         else:
-            empire_id = fo.getEmpireID()
+            empire_id = fo.empireID()
             capital_id = PlanetUtilsAI.get_capital()
             self.production_cost = self.building.productionCost(empire_id, capital_id)
             self.production_time = self.building.productionTime(empire_id, capital_id)
@@ -435,7 +498,17 @@ def generate_production_orders():
     # next check for buildings etc that could be placed on queue regardless of locally available PP
     # next loop over resource groups, adding buildings & ships
     universe = fo.getUniverse()
+    empire = fo.getEmpire()
+
     building_cache.update()
+
+    building_manager_map = {
+        "BLD_INDUSTRY_CENTER": IndustrialCenterManager(),
+    }
+    for building in building_manager_map:
+        if empire.buildingTypeAvailable(building):
+            building_manager_map[building].make_building_decision()
+
     capitol_id = PlanetUtilsAI.get_capital()
     if capitol_id is None or capitol_id == -1:
         homeworld = None
@@ -444,7 +517,6 @@ def generate_production_orders():
         homeworld = universe.getPlanet(capitol_id)
         capitol_sys_id = homeworld.systemID
     print "Production Queue Management:"
-    empire = fo.getEmpire()
     production_queue = empire.productionQueue
     total_pp = empire.productionPoints
     current_turn = fo.currentTurn()
@@ -1692,16 +1764,17 @@ class ProductionQueueManager(object):
             while True:
                 try:
                     if element.locationID in gained_planets:
-                        cur_priority = 0.0
-                        base_priority = 0.0
+                        cur_priority = PRIORITY_INVALID + self._number_of_invalid_priorities
+                        base_priority = PRIORITY_INVALID + self._number_of_invalid_priorities
+                        self._number_of_invalid_priorities += 1
                         item_type = (EnumsAI.AIEmpireProductionTypes.BT_BUILDING
-                                     if element.buildType == EnumsAI.AIEmpireProductionTypes.BT_SHIP
+                                     if element.buildType == EnumsAI.AIEmpireProductionTypes.BT_BUILDING
                                      else EnumsAI.AIEmpireProductionTypes.BT_SHIP)
                         this_item = self.get_name_of_production_queue_element(element)
                         loc = element.locationID
                         self._production_queue.insert(i, (cur_priority, base_priority, item_type, this_item, loc))
                         self._conquered_items_last_turn.append((cur_priority, base_priority, item_type, this_item, loc))
-                        continue  # sort later on TODO: adjust priority based on needs, dequeue etc...
+                        break  # sort later on TODO: adjust priority based on needs, dequeue etc...
                     (cur_priority, base_priority, item_type, this_item, loc) = self._production_queue[i]
                     if this_item == item and loc == element.locationID:  # item not finished yet, keep in list
                         break
@@ -1715,6 +1788,7 @@ class ProductionQueueManager(object):
                     print_error(e)
                     break
 
+        print "New production_queue before cleaning up remaining items: ", self._production_queue
         # some items in our list may have not been matched yet with items in the ingame-production queue
         for remaining_item in self._production_queue[len(ingame_production_queue):]:
             (cur_priority, base_priority, item_type, this_item, loc) = remaining_item
@@ -1723,6 +1797,7 @@ class ProductionQueueManager(object):
             else:  # not in queue anymore, planet still in our hands... item must be finished!
                 self._items_finished_last_turn.append(remaining_item)
         del self._production_queue[len(ingame_production_queue):]
+        print "Production_queue after cleaning up remeining items: ", self._production_queue
 
         print "Items that were finished in last turn: ", self._items_finished_last_turn
         print "Items that we were building on planets we lost during last turn: ", self._items_lost_last_turn
@@ -1852,66 +1927,3 @@ class ProductionQueueManager(object):
             if item_type == EnumsAI.AIEmpireProductionTypes.BT_BUILDING:
                 queued_bldgs.setdefault(this_item, []).append(loc)
         return queued_bldgs
-
-
-def _get_change_of_planets():
-    all_planets = fo.getUniverse().planetIDs
-    currently_owned_planets = set(PlanetUtilsAI.get_owned_planets_by_empire(all_planets))
-    old_outposts = AIstate.outpostIDs
-    old_popctrs = AIstate.popCtrIDs
-    old_owned_planets = set(old_outposts + old_popctrs)
-    newly_gained_planets = currently_owned_planets - old_owned_planets
-    lost_planets = old_owned_planets - currently_owned_planets
-    return tuple(lost_planets), tuple(newly_gained_planets)
-
-
-def _get_all_existing_buildings():
-    """Return all existing buildings in the empire with locations.
-
-    :return: Existing buildings in the empire with locations (planet_ids)
-    :rtype: dict{str: int}
-    """
-    existing_buildings = {}  # keys are building names, entries are planet ids where building stands
-    universe = fo.getUniverse()
-    for pid in set(AIstate.popCtrIDs + AIstate.outpostIDs):
-        planet = universe.getPlanet(pid)
-        if not planet:
-            sys.stderr.write('Can not find planet with id %d' % pid)
-            continue
-        for bld_name in [bld.buildingTypeName for bld in map(universe.getObject, planet.buildingIDs)]:
-            existing_buildings.setdefault(bld_name, []).append(pid)
-    return existing_buildings
-
-
-def _get_system_closest_to_target(system_ids, target_system_id):
-    universe = fo.getUniverse()
-    distances = []
-    for sys_id in system_ids:
-        if sys_id != -1:  # check only valid systems
-            try:
-                distance = universe.jumpDistance(target_system_id, sys_id)
-                distances.append((distance, sys_id))
-            except Exception as e:
-                print_error(e, location="ProductionAI._get_system_closest_to_target")
-    shortest_distance, closest_system = sorted(distances)[0] if distances else (9999, -1)  # -1: invalid system_id
-    return closest_system, shortest_distance
-
-
-def _count_empire_foci():
-    """Count current foci settings in empire.
-    :rtype : tuple(int, int)
-    :return: number_of_production_foci, number_of_research_foci
-    """
-    universe = fo.getUniverse()
-    n_production = 0
-    n_research = 0
-    for planet_id in AIstate.popCtrIDs:
-        planet = universe.getPlanet(planet_id)
-        if not planet:
-            continue
-        focus = planet.focus
-        if focus == EnumsAI.AIFocusType.FOCUS_INDUSTRY:
-            n_production += 1
-        elif focus == EnumsAI.AIFocusType.FOCUS_RESEARCH:
-            n_research += 1
-    return n_production, n_research
