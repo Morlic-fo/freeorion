@@ -16,6 +16,7 @@ import cProfile, pstats, StringIO  # profiling of ShipDesignAI code calls
 import time
 import math
 import random
+import sys
 
 BUILDING = EnumsAI.AIEmpireProductionTypes.BT_BUILDING
 SHIP = EnumsAI.AIEmpireProductionTypes.BT_SHIP
@@ -227,6 +228,11 @@ def generate_production_orders():
     # next check for buildings etc that could be placed on queue regardless of locally available PP
     # next loop over resource groups, adding buildings & ships
     universe = fo.getUniverse()
+    existing_buildings = _get_all_existing_buildings()
+    print "Existing buildings: "
+    for bld_name, locs in existing_buildings.iteritems():
+        print "%s: " % bld_name,
+        print [planet.name for planet in map(universe.getPlanet, locs) if planet]
     capitol_id = PlanetUtilsAI.get_capital()
     if capitol_id is None or capitol_id == -1:
         homeworld = None
@@ -1737,3 +1743,21 @@ def _get_change_of_planets():
     newly_gained_planets = currently_owned_planets - old_owned_planets
     lost_planets = old_owned_planets - currently_owned_planets
     return tuple(lost_planets), tuple(newly_gained_planets)
+
+
+def _get_all_existing_buildings():
+    """Return all existing buildings in the empire with locations.
+
+    :return: Existing buildings in the empire with locations (planet_ids)
+    :rtype: dict{str: int}
+    """
+    existing_buildings = {}  # keys are building names, entries are planet ids where building stands
+    universe = fo.getUniverse()
+    for pid in set(AIstate.popCtrIDs + AIstate.outpostIDs):
+        planet = universe.getPlanet(pid)
+        if not planet:
+            sys.stderr.write('Can not find planet with id %d' % pid)
+            continue
+        for bld_name in [bld.buildingTypeName for bld in map(universe.getObject, planet.buildingIDs)]:
+            existing_buildings.setdefault(bld_name, []).append(pid)
+    return existing_buildings
