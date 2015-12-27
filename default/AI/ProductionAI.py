@@ -258,7 +258,8 @@ def generate_production_orders():
             claimed_stars[sType] = list(AIstate.empireStars[sType])
         for sys_id in set(AIstate.colonyTargetedSystemIDs + AIstate.outpostTargetedSystemIDs):
             target_sys = universe.getSystem(sys_id)
-            if not target_sys: continue
+            if not target_sys:
+                continue
             claimed_stars.setdefault(target_sys.starType, []).append(sys_id)
 
     if (current_turn in [1, 4]) and ((production_queue.totalSpent < total_pp) or (len(production_queue) <= 3)):
@@ -1313,8 +1314,6 @@ def generate_production_orders():
         print "\t%s\t%.2f" % (
             ppstring(PlanetUtilsAI.sys_name_ids(set(PlanetUtilsAI.get_systems(pSet)))), allocated_pp[pSet])
 
-    if False:  # log ship design assessment
-        get_best_ship_ratings(list(AIstate.popCtrIDs))
     print "\n\nBuilding Ships in system groups with remaining PP:"
     for pSet in planets_with_wasted_pp:
         total_pp = available_pp.get(pSet, 0)
