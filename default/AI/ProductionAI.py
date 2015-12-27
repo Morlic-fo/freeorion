@@ -889,40 +889,26 @@ def generate_production_orders():
                 bld_name, capitol_id, universe.getPlanet(capitol_id).name, res)
 
     bld_name = "BLD_NEUTRONIUM_EXTRACTOR"
-    already_got_extractor = False
-    if (empire.buildingTypeAvailable(bld_name) and
-            ([element.locationID for element in production_queue if (element.name == bld_name)] == []) and
-            AIstate.empireStars.get(fo.starType.neutron, [])):
-        for pid in list(AIstate.popCtrIDs) + list(AIstate.outpostIDs):
-            planet = universe.getPlanet(pid)
-            if(planet
-               and("BLD_NEUTRONIUM_SYNTH" in [bld.buildingTypeName
-                                              for bld in map(universe.getObject, planet.buildingIDs)]
-                   or(planet.systemID in AIstate.empireStars.get(fo.starType.neutron, [])
-                      and bld_name in [bld.buildingTypeName for bld in map(universe.getObject, planet.buildingIDs)])
-                   )
-               ):
-                already_got_extractor = True
-        if not already_got_extractor:
+    if empire.buildingTypeAvailable(bld_name):
+        # valid planets are either in a neutron star system or where we have a neutronium synthetizer
+        planets_with_neutron = set(AIstate.outpostIDs + AIstate.popCtrIDs).intersection(
+            PlanetUtilsAI.get_planets_in__systems_ids(AIstate.empireStars.get(fo.starType.neutron, [])))
+        planets_with_neutron.update(existing_buildings.get("BLD_NEUTRONIUM_SYNTH", []))
+
+        already_got_extractor = len(planets_with_neutron.intersection(existing_buildings.get(bld_name, [])
+                                                                      + queued_buildings.get(bld_name, []))) > 0
+        if planets_with_neutron and not already_got_extractor:
+            print "Trying to find a suitable location for %s" % bld_name
+            neutron_systems = PlanetUtilsAI.get_systems(planets_with_neutron)  # non-empty: we have planets_with_neutron
             if not homeworld:
-                use_sys = AIstate.empireStars.get(fo.starType.neutron, [])[0]
+                use_sys = neutron_systems[0]
             else:
-                distance_map = {}
-                for sys_id in AIstate.empireStars.get(fo.starType.neutron, []):
-                    if sys_id == -1:
-                        continue
-                    try:
-                        distance_map[sys_id] = universe.jumpDistance(homeworld.systemID, sys_id)
-                    except Exception as e:
-                        print_error(e, location="ProductionAI.generate_production_orders")
-                print ([-1] + sorted([(dist, sys_id) for sys_id, dist in distance_map.items()]))
-                use_sys = ([(-1, -1)] + sorted([(dist, sys_id) for sys_id, dist in distance_map.items()]))[:2][-1][
-                    -1]  # kinda messy, but ensures a value
+                use_sys, _ = _get_system_closest_to_target(neutron_systems, homeworld.systemID)
             if use_sys != -1:
                 use_loc = AIstate.colonizedSystems[use_sys][0]
                 res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, use_loc,
                                                                            PRIORITY_BUILDING_HIGH)
-                print "Enqueueing %s at planet %d (%s) , with result %d" % (
+                print "Enqueueing %s at planet %d (%s), with result %d" % (
                     bld_name, use_loc, universe.getPlanet(use_loc).name, res)
 
     bld_name = "BLD_SHIPYARD_CON_GEOINT"
