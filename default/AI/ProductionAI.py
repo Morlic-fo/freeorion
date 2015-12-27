@@ -797,50 +797,51 @@ def generate_production_orders():
                         bldg_expense += cost / prod_time  # production_queue[production_queue.size -1].blocksize *
 
     bld_name = "BLD_ART_BLACK_HOLE"
-    if(empire.buildingTypeAvailable(bld_name)
-       and foAI.foAIstate.aggression > fo.aggression.typical
-       and len(AIstate.empireStars.get(fo.starType.red, [])) > 0
-       ):
-        already_got_one = False
-        for pid in list(AIstate.popCtrIDs) + list(AIstate.outpostIDs):
-            planet = universe.getPlanet(pid)
-            if planet and bld_name in [bld.buildingTypeName for bld in map(universe.getObject, planet.buildingIDs)]:
-                already_got_one = True  # has been built, needs one turn to activate
-        queued_bld_locs = [element.locationID for element in production_queue if (element.name == bld_name)]
-        # TODO: check that queued locs or already built one are at red stars
-        if not bh_pilots and len(queued_bld_locs) == 0 and (red_pilots or not already_got_one):  #
-            use_loc = None
-            nominal_home = homeworld or universe.getPlanet(
-                (red_pilots + AIstate.colonizedSystems[AIstate.empireStars[fo.starType.red][0]])[0])
-            distance_map = {}
-            for sys_id in AIstate.empireStars.get(fo.starType.red, []):
-                if sys_id == -1:
-                    continue
-                try:
-                    distance_map[sys_id] = universe.jumpDistance(nominal_home.systemID, sys_id)
-                except Exception as e:
-                    print_error(e)
-            red_sys_list = sorted([(dist, sys_id) for sys_id, dist in distance_map.items()])
-            for dist, sys_id in red_sys_list:
-                for loc in AIstate.colonizedSystems[sys_id]:
-                    planet = universe.getPlanet(loc)
-                    if planet and planet.speciesName not in ["", None]:
-                        species = fo.getSpecies(planet.speciesName)
-                        if species and "PHOTOTROPHIC" in list(species.tags):
-                            break
+    min_aggression = fo.aggression.typical
+    red_star_systems = AIstate.empireStars.get(fo.starType.red, [])
+    if empire.buildingTypeAvailable(bld_name) and red_star_systems and foAI.foAIstate.aggression > min_aggression:
+        existing_locs = existing_buildings.get(bld_name, []) + queued_buildings.get(bld_name, [])
+        valid_existing_locs = set(red_star_systems).intersection(existing_locs)
+        if not valid_existing_locs:  # only have one at a time
+            black_hole_systems = AIstate.empireStars.get(fo.starType.blackHole, [])
+            black_hole_generator = "BLD_BLACK_HOLE_POW_GEN"
+            already_queued_one = False
+            if not bh_pilots and red_pilots and "SH_SOLAR" in empire.availableShipHulls:  # TODO: generalize hulls
+                print "Considering to build a %s so we get access to black hole pilots (for solar hulls)." % bld_name
+                loc = -1
+                for pid in red_pilots:
+                    try:
+                        system_id = universe.getPlanet(pid).systemID
+                        planets_in_system = PlanetUtilsAI.get_planets_in__systems_ids([system_id])
+                        owned_planets_in_system = PlanetUtilsAI.get_owned_planets_by_empire(planets_in_system)
+                    except Exception as e:
+                        print_error(e)
+                        continue
+                    for pid2 in owned_planets_in_system:
+                        planet = universe.getPlanet(pid2)
+                        if planet and planet.speciesName:
+                            species = fo.getSpecies(planet.speciesName)
+                            if species and "PHOTOTROPHIC" in species.tags:
+                                break
+                    else:  # no phototrophic species in this system, save to build
+                        loc = pid
+                        break
+                if loc != -1:
+                    res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, loc, PRIORITY_BUILDING_LOW)
+                    print "Enqueueing %s at planet %s, with result %d" % (bld_name, universe.getPlanet(loc).name, res)
+                    if res:
+                        already_queued_one = True
                 else:
-                    use_loc = list(set(red_pilots).intersection(AIstate.colonizedSystems[sys_id]) or
-                                   AIstate.colonizedSystems[sys_id])[0]
-                if use_loc is not None:
-                    break
-            if use_loc is not None:
-                planet_used = universe.getPlanet(use_loc)
-                res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, use_loc,
-                                                                           PRIORITY_BUILDING_LOW)
-                print "Enqueueing %s at planet %s , with result %d" % (bld_name, planet_used, res)
-                if res:
-                    if _CHAT_DEBUG:
-                        chat_human("Enqueueing %s at planet %s , with result %d" % (bld_name, planet_used, res))
+                    print "But could not find a suitable location..."
+            if not already_queued_one and empire.buildingTypeAvailable(black_hole_generator) and not black_hole_systems:
+                print "Considering to build a %s so we can build a %s." % (bld_name, black_hole_generator)
+                use_sys, _ = _get_system_closest_to_target(red_star_systems, homeworld.systemID)
+                if use_sys != -1:
+                    use_loc = AIstate.colonizedSystems[use_sys][0]
+                    res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, bld_name, use_loc, PRIORITY_BUILDING_HIGH)
+                    print "Enqueueing %s at planet %d (%s) , with result %d" % (bld_name, use_loc, universe.getPlanet(use_loc).name, res)
+                else:
+                    print "But could not find a suitable location..."
 
     bld_name = "BLD_BLACK_HOLE_POW_GEN"
     if empire.buildingTypeAvailable(bld_name) and foAI.foAIstate.aggression > fo.aggression.cautious:
