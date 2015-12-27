@@ -254,15 +254,13 @@ def generate_production_orders():
                 continue
             claimed_stars.setdefault(target_sys.starType, []).append(sys_id)
 
-    if (current_turn in [1, 4]) and ((production_queue.totalSpent < total_pp) or (len(production_queue) <= 3)):
-        best_design_id, best_design, build_choices = get_best_ship_info(
-            EnumsAI.AIPriorityType.PRIORITY_PRODUCTION_EXPLORATION)
-        if len(AIstate.opponentPlanetIDs) == 0:
-            init_scouts = 3
-        else:
-            init_scouts = 0
+    # at beginning of the game, enqueue some scouts unless we already have found enemy planets
+    if(current_turn < 5 and not AIstate.opponentPlanetIDs
+       and (production_queue.totalSpent < total_pp or len(production_queue) <= 3)
+       ):
+        best_design_id, _, build_choices = get_best_ship_info(EnumsAI.AIPriorityType.PRIORITY_PRODUCTION_EXPLORATION)
         if best_design_id:
-            for scout_count in range(init_scouts):
+            for scout_count in xrange(3):
                 foAI.foAIstate.production_queue_manager.enqueue_item(SHIP, best_design_id, build_choices[0],
                                                                      PRIORITY_SHIP_SCOUT)
         fo.updateProductionQueue()
