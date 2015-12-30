@@ -152,3 +152,15 @@ def get_systems(planet_ids):
     # TODO discuss change return type to set
     universe = fo.getUniverse()
     return [universe.getPlanet(pid).systemID for pid in planet_ids]
+
+
+def get_empire_planets_in_system(system_id):
+    """Return all planets in system owned by our empire.
+
+    :param system_id: ID of the system to be queried
+    :type system_id: int
+    :return: owned planet ids
+    :rtype: list
+    """
+    return get_owned_planets_by_empire(get_planets_in__systems_ids([system_id]))
+

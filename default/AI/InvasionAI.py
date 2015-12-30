@@ -128,7 +128,7 @@ def get_invasion_fleets():
                     this_sys_status.get('myFleetRating', 0) < 0.8 * this_sys_status.get('totalThreat', 0)):
                 continue
             loc = foAI.foAIstate.qualifyingTroopBaseTargets[pid][0]
-            best_base_trooper_here = ProductionAI.getBestShipInfo(EnumsAI.AIPriorityType.PRIORITY_PRODUCTION_ORBITAL_INVASION, loc)[1]
+            best_base_trooper_here = ProductionAI.get_best_ship_info(EnumsAI.AIPriorityType.PRIORITY_PRODUCTION_ORBITAL_INVASION, loc)[1]
             loc_planet = universe.getPlanet(loc)
             if best_base_trooper_here is None:  # shouldn't be possible at this point, but just to be safe
                 print "Could not find a suitable orbital invasion design at %s" % loc_planet
@@ -141,19 +141,20 @@ def get_invasion_fleets():
                 print "The best orbital invasion design at %s seems not to have any troop capacity." % loc_planet
                 continue
             this_score,  p_troops = evaluate_invasion_planet(pid, empire, secure_ai_fleet_missions, False)
-            best_ship, col_design, build_choices = ProductionAI.getBestShipInfo(EnumsAI.AIPriorityType.PRIORITY_PRODUCTION_ORBITAL_INVASION, loc)
+            best_ship, col_design, build_choices, _ = ProductionAI.get_best_ship_info(EnumsAI.AIPriorityType.PRIORITY_PRODUCTION_ORBITAL_INVASION, loc)
             if not best_ship:
                 continue
             n_bases = math.ceil((p_troops+1) / troops_per_ship)  # TODO: reconsider this +1 safety factor
             print "Invasion base planning, need %d troops at %d pership, will build %d ships." % ((p_troops+1), troops_per_ship, n_bases)
-            retval = fo.issueEnqueueShipProductionOrder(best_ship, loc)
+            for i in xrange(0,int(n_bases)):
+                retval = foAI.foAIstate.production_queue_manager.enqueue_item(EnumsAI.AIEmpireProductionTypes.BT_SHIP,
+                                                                        best_ship, loc, ProductionAI.PRIORITY_SHIP_ORBITAL_TROOPS)
+
             print "Enqueueing %d Troop Bases at %s for %s" % (n_bases, PlanetUtilsAI.planet_name_ids([loc]), PlanetUtilsAI.planet_name_ids([pid]))
             if retval != 0:
                 all_invasion_targeted_system_ids.add(planet.systemID)
                 reserved_troop_base_targets.append(pid)
                 foAI.foAIstate.qualifyingTroopBaseTargets[pid][1] = loc
-                fo.issueChangeProductionQuantityOrder(empire.productionQueue.size - 1, 1, int(n_bases))
-                fo.issueRequeueProductionOrder(empire.productionQueue.size - 1, 0)
 
     invasion_timer.start("evaluating target planets")
     # TODO: check if any invasion_targeted_planet_ids need more troops assigned

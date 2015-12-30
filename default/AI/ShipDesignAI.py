@@ -540,12 +540,13 @@ class ShipDesignCache(object):
                 print "eventhough it is supposed to be a proper subset."
                 traceback.print_exc()
         number_of_testhulls = len(self.testhulls)
-
+        if verbose:
+            print "Have %d testhulls: " % number_of_testhulls, self.testhulls
         # 4. Cache the list of buildable ship parts for each planet
         print "Caching buildable ship parts per planet..."
         for pid in inhabited_planets:
             local_testhulls = [hull for hull in self.testhulls
-                               if hull in self.hulls_for_planets[pid][:number_of_testhulls]]
+                               if hull in self.hulls_for_planets[pid]]
             this_planet = universe.getPlanet(pid)
             if verbose:
                 print "Testhulls for %s are %s" % (this_planet, local_testhulls)
@@ -659,7 +660,7 @@ class ShipDesigner(object):
     filter_useful_parts = True              # removes any part not belonging to self.useful_part_classes
     filter_inefficient_parts = False        # removes cost-inefficient parts (less capacity and less capacity/cost)
 
-    consider_fleet_count = True             # defines if we consider fleet upkee cost
+    consider_fleet_count = False             # defines if we consider fleet upkee cost
 
     NAMETABLE = "AI_SHIPDESIGN_NAME_INVALID"
     NAME_THRESHOLDS = []                    # list of rating thresholds to choose a different name
@@ -1011,7 +1012,7 @@ class ShipDesigner(object):
         pass
 
     def optimize_design(self, additional_parts=[], additional_hulls=[],
-                        loc=None, verbose=False, consider_fleet_count=True):
+                        loc=None, verbose=False, consider_fleet_count=False):
         """Try to find the optimimum designs for the shipclass for each planet and add it as gameobject.
 
         Only designs with a positive rating (i.e. matching the minimum requirements) will be returned.
@@ -1082,8 +1083,6 @@ class ShipDesigner(object):
                 relevant_grades.append("TROOPS: %s" % troops_grade)
             species_tuple = tuple(relevant_grades)
             design_cache_species = design_cache_tech.setdefault(species_tuple, {})
-
-
 
             available_hulls = list(Cache.hulls_for_planets[pid]) + additional_hulls
             if verbose:
@@ -1991,5 +1990,4 @@ def _calculate_weapon_strength(weapon):
             print "ERROR: Could not retrieve tech %s" % tech
             print "Please update AIDependencies.py! In WEAPON_UPGRADE_DICT enter the correct upgrade tech(s) for %s" % weapon_name
             print_error(e)
-    print "%s, total tech bonus: %d" % (weapon_name, total_tech_bonus)
     return damage + total_tech_bonus

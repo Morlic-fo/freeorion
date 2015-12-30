@@ -196,7 +196,8 @@ def generateOrders():  # pylint: disable=invalid-name
     foAIstate.report_system_threats()
     print("Calling AI Modules")
     # call AI modules
-    action_list = [ColonisationAI.survey_universe,
+    action_list = [foAIstate.production_queue_manager.update_for_new_turn,
+                   ColonisationAI.survey_universe,
                    ProductionAI.find_best_designs_this_turn,
                    PriorityAI.calculate_priorities,
                    ExplorationAI.assign_scouts_to_explore_systems,
@@ -206,7 +207,7 @@ def generateOrders():  # pylint: disable=invalid-name
                    FleetUtilsAI.generate_fleet_orders_for_fleet_missions,
                    FleetUtilsAI.issue_fleet_orders_for_fleet_missions,
                    ResearchAI.generate_research_orders,
-                   ProductionAI.generateProductionOrders,
+                   ProductionAI.generate_production_orders,
                    ResourcesAI.generate_resources_orders,
                    foAIstate.after_turn_cleanup,
                    ]
