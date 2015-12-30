@@ -425,6 +425,10 @@ class GenomeBankManager(GenericUniqueBuilding):
 
 
 class ImperialPalaceManager(GenericUniqueBuilding):
+    """Handles the building of imperial palaces.
+
+    Rules: Build one, if none existing yet.
+    """
     name = "BLD_IMPERIAL_PALACE"
     priority = PRIORITY_BUILDING_HIGH
     minimum_aggression = fo.aggression.beginner
@@ -434,6 +438,10 @@ class ImperialPalaceManager(GenericUniqueBuilding):
 
 
 class NeutroniumSynthManager(GenericUniqueBuilding):
+    """Handles the building of the neutronium synthetizer.
+
+    Rule: If we do not have one yet, build one preferable at the capital.
+    """
     name = "BLD_NEUTRONIUM_SYNTH"
     priority = PRIORITY_BUILDING_LOW
     minimum_aggression = fo.aggression.maniacal
@@ -443,6 +451,13 @@ class NeutroniumSynthManager(GenericUniqueBuilding):
 
 
 class NeutroniumExtractorManager(GenericUniqueBuilding):
+    """Handles the building of the neutronium extractor.
+
+    Rules:
+    -Valid locations are either neutron star systems or planets with neutronium synthetizer.
+    -Build only if we have no valid neutronium extractor yet
+    -Build location is closest suitable system to capital (random planet)
+    """
     name = "BLD_NEUTRONIUM_EXTRACTOR"
     minimum_aggression = fo.aggression.maniacal
     priority = PRIORITY_BUILDING_LOW
@@ -2127,3 +2142,282 @@ class ProductionQueueManager(object):
             if item_type == EnumsAI.AIEmpireProductionTypes.BT_BUILDING:
                 queued_bldgs.setdefault(this_item, []).append(loc)
         return queued_bldgs
+
+
+class ShipyardManager(object):  # TODO: Inherit from base building class...
+    name = ""
+    minimum_spacing = 5
+    production_cost = 99999
+    production_time = 99999
+    prereqs = []
+    unlocked_hulls = []
+    unlocked_parts = []
+
+    def __init__(self, ai_priority, ship_designer):
+        self.building = fo.getBuildingType(self.name)
+        if self.building:
+            empire_id = fo.empireID()
+            capital_id = PlanetUtilsAI.get_capital()
+            self.production_cost = self.building.productionCost(empire_id, capital_id)
+            self.production_time = self.building.productionTime(empire_id, capital_id)
+        self.ai_priority = ai_priority
+        self.ship_designer = ship_designer
+        self.unlocked_hulls = list(set(self.unlocked_hulls).intersection(fo.getEmpire().availableShipHulls))
+        self.unlocked_parts = list(set(self.unlocked_parts).intersection(fo.getEmpire().availableShipParts))
+
+    def _possible_locations(self):
+        universe = fo.getUniverse()
+        locs = []
+        for pid in AIstate.popCtrIDs:
+            planet = universe.getPlanet(pid)
+            if not planet:
+                continue
+            species_name = planet.speciesName
+            if not species_name:
+                continue
+            species = fo.getSpecies(species_name)
+            if not species or not species.canProduceShips:
+                continue
+            locs.append(pid)
+        return locs
+
+    def _get_rating_improvements(self, pid):
+        old_stats = self.ship_designer.optimize_design(loc=pid, consider_fleet_count=False)
+        new_stats = self.ship_designer.optimize_design(loc=pid, consider_fleet_count=False,
+                                                       additional_parts=self.unlocked_parts,
+                                                       additional_hulls=self.unlocked_hulls)
+        old_rating = old_stats[0]
+        new_rating = new_stats[0]
+        diff = new_rating - old_rating
+        return new_rating, diff
+
+    def _get_candidate_list(self):
+        old_best_rating, _, old_locs = get_best_ship_info(self.ai_priority)
+        candidates = []
+        best_rating = old_best_rating
+        improvement = False
+        for pid in self._possible_locations():
+            new_rating, diff = self._get_rating_improvements(pid)
+            if diff <= 0:
+                continue
+            if new_rating > best_rating:
+                best_rating = new_rating
+                candidates = [pid]  # delete old entries
+                improvement = True
+            elif new_rating == best_rating:
+                candidates.append(pid)
+        if not candidates:
+            return None
+        else:
+            universe = fo.getUniverse()
+            existing_yard_systems = []
+            for pid in old_locs:
+                existing_yard_systems.append(universe.getPlanet(pid).systemID)
+            candidate_list = [ShipyardLocationCandidate(pid=pid, bld_name=self.name, prereqs=self.prereqs,
+                                                        rating=best_rating, improvement=improvement,
+                                                        yard_locs=existing_yard_systems)
+                              for pid in candidates]
+        return candidate_list
+
+    @staticmethod
+    def _get_cheapest_candidates(candidate_list):
+        cheapest_candidates = []
+        least_cost = 99999
+        for candidate in candidate_list:
+            this_cost = candidate.get_total_pp_cost()
+            if this_cost < least_cost:
+                least_cost = this_cost
+                cheapest_candidates = [candidate]
+            elif this_cost == least_cost:
+                cheapest_candidates.append(candidate)
+        return cheapest_candidates
+
+    @staticmethod
+    def _get_closest_candidate(candidate_list):
+        max_dist = -1
+        chosen_candidate = None
+        for candidate in candidate_list:
+            this_dist = candidate.get_distance_to_yards()
+            if this_dist > max_dist:
+                max_dist = this_dist
+                chosen_candidate = candidate
+        return chosen_candidate
+
+    def get_candidate(self):
+        """Get the best candidate location for the shipyard.
+
+        :return:
+        :rtype: ShipyardLocationCandidate
+        """
+        candidate_list = self._get_candidate_list()
+        if not candidate_list:
+            return None
+        if not candidate_list[0].improvement:
+            candidate_list = filter(lambda x: x.get_distance_to_yards() >= self.minimum_spacing, candidate_list)
+        cheapest_candidates = self._get_cheapest_candidates(candidate_list)
+        chosen_candidate = self._get_closest_candidate(cheapest_candidates)
+        return chosen_candidate
+
+
+class BasicShipyardManager(ShipyardManager):
+    name = "BLD_SHIPYARD_BASE"
+
+    def __init__(self):
+        self.unlocked_hulls.extend(["SH_BASIC_SMALL", "SH_BASIC_MEDIUM", "SH_STANDARD", "SH_XENTRONIUM"])
+        self.unlocked_parts.extend([part for part in fo.getEmpire().availableShipParts
+                                    if part not in AIDependencies.SHIP_PART_BUILDING_REQUIREMENTS])
+        ShipyardManager.__init__()
+
+
+class DryDockManager(BasicShipyardManager):
+    name = "BLD_SHIPYARD_ORBITAL_DRYDOCK"
+
+    def __init__(self):
+        self.unlocked_hulls.extend(["SH_ROBOTIC", "SH_SPATIAL_FLUX"])
+        BasicShipyardManager.__init__(self)
+        self.prereqs.append("BLD_SHIPYARD_BASE")
+
+
+class NanoRoboticShipyardManager(DryDockManager):
+    name = "BLD_SHIPYARD_CON_NANOROBO"
+
+    def __init__(self):
+        self.unlocked_hulls.extend(["SH_NANOROBOTIC"])
+        DryDockManager.__init__(self)
+        self.prereqs.extend(["BLD_SHIPYARD_ORBITAL_DRYDOCK"])
+
+
+class GeoIntegrityShipyardManager(DryDockManager):
+    name = "BLD_SHIPYARD_CON_GEOINT"
+
+    def __init__(self):
+        self.unlocked_hulls.extend(["SH_SELF_GRAVITATING", "SH_TITANIC"])
+        DryDockManager.__init__(self)
+        self.prereqs.extend(["BLD_SHIPYARD_ORBITAL_DRYDOCK"])
+
+
+class AdvancedEngineeringBayManager(DryDockManager):
+    name = "BLD_SHIPYARD_CON_ADV_ENGINE"
+
+    def __init__(self):
+        self.unlocked_hulls.extend(["SH_TRANSSPATIAL"])
+        self.unlocked_parts.extend(["FU_TRANSPATIAL_DRIVE"])
+        DryDockManager.__init__(self)
+        self.prereqs.extend(["BLD_SHIPYARD_ORBITAL_DRYDOCK"])
+
+
+class LogisticFacilitatorManager(BasicShipyardManager):
+# technically not a building on its own, but easier for dependencies to give its own class...
+    name = "BLD_SHIPYARD_CON_ADV_ENGINE"
+
+    def __init__(self):
+        self.unlocked_hulls.extend(["SH_LOGISTICS_FACILITATOR"])
+        BasicShipyardManager.__init__()
+        self.prereqs.extend(["BLD_SHIPYARD_ORBITAL_DRYDOCK", "BLD_SHIPYARD_CON_GEOINT", "BLD_SHIPYARD_CON_NANOROBO"])
+
+
+class OrbitalIncubatorManager(BasicShipyardManager):
+    name = "BLD_SHIPYARD_ORG_ORB_INC"
+
+    def __init__(self):
+        self.unlocked_hulls.extend(["SH_ORGANIC", "SH_STATIC_MULTICELLULAR", "SH_SYMBIOTIC"])
+        BasicShipyardManager.__init__(self)
+        self.prereqs.append(BasicShipyardManager.name)
+
+
+class CellularGrowthChamberManager(OrbitalIncubatorManager):
+    name = "BLD_SHIPYARD_ORG_CELL_GRO_CHAMB"
+
+    def __init__(self):
+        self.unlocked_hulls.extend(["SH_PROTOPLASMIC", "SH_BIOADAPTIVE"])
+        OrbitalIncubatorManager.__init__(self)
+        self.prereqs.append(OrbitalIncubatorManager.name)
+
+
+class XenoCoordinationFacilityManager(OrbitalIncubatorManager):
+    name = "BLD_SHIPYARD_ORG_XENO_FAC"
+
+    def __init__(self):
+        self.unlocked_hulls.extend(["SH_ENDOMORPHIC", "SH_RAVENOUS"])
+        OrbitalIncubatorManager.__init__(self)
+        self.prereqs.append(OrbitalIncubatorManager.name)
+
+
+class AdvancedOrganicShipsManager(OrbitalIncubatorManager):
+    name = "BLD_SHIPYARD_ORG_XENO_FAC"
+
+    def __init__(self):
+        self.unlocked_hulls.extend(["SH_ENDOSYMBIOTIC", "SH_SENTIENT"])
+        OrbitalIncubatorManager.__init__(self)
+        self.prereqs.extend([OrbitalIncubatorManager.name, XenoCoordinationFacilityManager.name,
+                             CellularGrowthChamberManager.name])
+
+
+class EnergyCompressionShipyardManager(BasicShipyardManager):
+    name = "BLD_SHIPYARD_ENRG_COMP"
+
+    def __init__(self):
+        self.unlocked_hulls.extend(["SH_COMPRESSED_ENERGY", "SH_ENERGY_FRIGATE", "SH_QUANTUM_ENERGY"])
+
+
+    def _possible_locations(self):
+        pass  # TODO
+
+
+# TODO: Framework for system-facilities
+class AsteroidShipyardManager(ShipyardManager):
+    name = "BLD_SHIPYARD_AST"
+    # TODO
+
+# TODO: Framework for system-facilities
+class AsteroidRefinementManager(AsteroidShipyardManager):
+    name = "BLD_SHIPYARD_AST_REF"
+    # TODO
+
+class ShipyardLocationCandidate(object):
+    INVALID_DISTANCE = 9999
+
+    def __init__(self, pid, bld_name, prereqs, rating, improvement, yard_locs):
+        universe = fo.getUniverse()
+        self.this_shipyard = bld_name
+        self.pid = pid
+        self.sys_id = universe.getPlanet(pid).systemID
+        self._dist_to_yards = self._calc_minimum_distance_to_yards(yard_locs)
+        self._missing_prereqs = self._calc_missing_prereqs(prereqs)
+        self._total_pp_cost = self._calc_total_pp_cost()
+        self.rating = rating
+        self.improvement = improvement
+
+    def get_distance_to_yards(self):
+        """Return minimum distance to yard of same rating."""
+        return self._dist_to_yards
+
+    def get_total_pp_cost(self):
+        """Return total pp cost of the building including missing prerequisites."""
+        return self._total_pp_cost
+
+    def get_missing_prereqs(self):
+        """Return a list of missing prerequisites."""
+        return list(self._missing_prereqs)
+
+    def _calc_minimum_distance_to_yards(self, yard_locs):
+        universe = fo.getUniverse()
+        min_dist = self.INVALID_DISTANCE
+        for yard_sys_id in yard_locs:
+            this_dist = universe.jumpDistance(self.sys_id, yard_sys_id)
+            min_dist = min(min_dist, this_dist)
+        return min_dist
+
+    def _calc_missing_prereqs(self, prereqs):
+        missing_prereqs = []
+        for prereq in prereqs:
+            if self.pid not in bld_cache.existing_buildings.get(prereq, []):
+                missing_prereqs.append(prereq)
+        return missing_prereqs
+
+    def _calc_total_pp_cost(self):
+        empire_id = fo.empireID()
+        total_cost = fo.getBuildingType(self.this_shipyard).productionCost(empire_id, self.pid)
+        for prereq in self._missing_prereqs:
+            total_cost += fo.getBuildingType(prereq).productionCost(empire_id, self.pid)
+        return total_cost
