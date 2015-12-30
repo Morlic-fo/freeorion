@@ -141,7 +141,7 @@ def get_invasion_fleets():
                 print "The best orbital invasion design at %s seems not to have any troop capacity." % loc_planet
                 continue
             this_score,  p_troops = evaluate_invasion_planet(pid, empire, secure_ai_fleet_missions, False)
-            best_ship, col_design, build_choices = ProductionAI.get_best_ship_info(EnumsAI.AIPriorityType.PRIORITY_PRODUCTION_ORBITAL_INVASION, loc)
+            best_ship, col_design, build_choices, _ = ProductionAI.get_best_ship_info(EnumsAI.AIPriorityType.PRIORITY_PRODUCTION_ORBITAL_INVASION, loc)
             if not best_ship:
                 continue
             n_bases = math.ceil((p_troops+1) / troops_per_ship)  # TODO: reconsider this +1 safety factor

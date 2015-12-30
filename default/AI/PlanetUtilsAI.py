@@ -163,3 +163,4 @@ def get_empire_planets_in_system(system_id):
     :rtype: list
     """
     return get_owned_planets_by_empire(get_planets_in__systems_ids([system_id]))
+
