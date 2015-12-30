@@ -994,9 +994,16 @@ def generate_production_orders():
         if empire.buildingTypeAvailable(building):
             building_manager_map[building]().make_building_decision()
 
+    find_best_designs_this_turn()
+    ShipDesignAI.Cache.print_hulls_for_planets()
+    ShipDesignAI.Cache.print_parts_for_planets()
+
     enqueued_yard = any(name in bld_cache.queued_buildings for name in ShipyardAI.shipyard_map)
     print enqueued_yard
     print "START DEBUG HERE!"
+    pr = cProfile.Profile()
+    pr.enable()
+    start = time.clock()
     if not enqueued_yard:
         print "ENTERING SHIP BUILDING CYCLE"
         ShipyardAI.ShipyardManager.ai_priority = EnumsAI.AIPriorityType.PRIORITY_PRODUCTION_MILITARY
@@ -1057,8 +1064,28 @@ def generate_production_orders():
                     if res:
                         break
             if not missing_prereqs or missing_sys_prereqs:
-                foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, cur_best_candidate.name,
-                                                                     cur_best_candidate.pid, priority)
+                if not cur_best_candidate.shipyard_is_system_wide:
+                    foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, cur_best_candidate.name,
+                                                                         cur_best_candidate.pid, priority)
+                else:
+                    # Some planet in the system has been found to be a valid location.
+                    # Could, in principle, determine the pid before... But we are lazy and enqueue until it works :)
+                    for pid in PlanetUtilsAI.get_empire_planets_in_system(cur_best_candidate.sys_id):
+                        if foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, cur_best_candidate.name,
+                                                                                pid, priority,
+                                                                                print_enqueue_errors=False):
+                            break
+    end = time.clock()
+    print "DEBUG INFORMATION: The design evaluations took %f s" % (end - start)
+    print "-----"
+    pr.disable()
+    s = StringIO.StringIO()
+    sortby = 'cumulative'
+    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+    ps.print_stats()
+    print s.getvalue()
+    print "-----"
+
     if not homeworld:
         print "if no capitol, no place to build, should get around to capturing or colonizing a new one"  # TODO
     else:
@@ -1779,7 +1806,15 @@ class ProductionQueueManager(object):
         old_queue = list(self._production_queue)
         for tup in old_queue:
             idx = bisect.bisect_left(self._production_queue, tup)  # as we sort self._production_queue, need to search!
-            (old_priority, base_priority, item_type, this_item, loc) = self._production_queue.pop(idx)
+            try:
+                (old_priority, base_priority, item_type, this_item, loc) = self._production_queue.pop(idx)
+            except ValueError as e:
+                print "DEBUG ERROR HERE!"
+                print self._production_queue
+                print idx
+                print self._production_queue[idx]
+                print_error(e)
+                raise e
             ingame_production_queue = fo.getEmpire().productionQueue  # make sure to get updated copy
             element = ingame_production_queue[idx]
             total_cost, total_turns = fo.getEmpire().productionCostAndTime(element)
@@ -1797,7 +1832,7 @@ class ProductionQueueManager(object):
         :return: name of Building or id of ShipDesign of the element"""
         return elem.designID if elem.buildType == EnumsAI.AIEmpireProductionTypes.BT_SHIP else elem.name
 
-    def enqueue_item(self, item_type, item, loc, priority=PRIORITY_DEFAULT):
+    def enqueue_item(self, item_type, item, loc, priority=PRIORITY_DEFAULT, print_enqueue_errors=True):
         """Enqueue item into production queue.
 
         :param item_type: type of the item to queue: ship or building
@@ -1819,10 +1854,11 @@ class ProductionQueueManager(object):
         elif item_type == EnumsAI.AIEmpireProductionTypes.BT_SHIP:
             production_order = fo.issueEnqueueShipProductionOrder
         else:
-            print_error("Tried to queue invalid item to production queue.",
-                        location="ProductionQueueManager.enqueue_item(%s, %s, %s, %s)" % (
-                            priority, item_type, item, loc),
-                        trace=False)
+            if print_enqueue_errors:
+                print_error("Tried to queue invalid item to production queue.",
+                            location="ProductionQueueManager.enqueue_item(%s, %s, %s, %s)" % (
+                                priority, item_type, item, loc),
+                            trace=False)
             return False
 
         # call C++ production order
@@ -1832,10 +1868,11 @@ class ProductionQueueManager(object):
             print_error(e)
             return False
         if not res:
-            print_error("Can not queue item to production queue.",
-                        location="ProductionQueueManager.enqueue_item(%s, %s, %s, %s)" % (
-                            priority, item_type, item, loc),
-                        trace=False)
+            if print_enqueue_errors:
+                print_error("Can not queue item to production queue.",
+                            location="ProductionQueueManager.enqueue_item(%s, %s, %s, %s)" % (
+                                priority, item_type, item, loc),
+                            trace=False)
             return False
 
         # Only now that we are sure to have enqueued the item, we keep track of it in our priority-sorted queue.
@@ -1859,7 +1896,13 @@ class ProductionQueueManager(object):
             print_error("Can not change position of item in production queue.")
             self.__handle_error_on_requeue(self._production_queue.pop(idx))
         print "After enqueuing ", item, ":"
-        print "self._production_queue: ", [tup[3] for tup in self._production_queue]
+        try:
+            print "self._production_queue: ", [tup[3] for tup in self._production_queue]
+        except IndexError as e:
+            print "INDEXERROR CAUGHT: self._production_queue:"
+            print self._production_queue
+            print_error(e)
+            raise e
         print "real productionQueue: ", [self.get_name_of_production_queue_element(elem) for elem in fo.getEmpire().productionQueue]
         return True
 

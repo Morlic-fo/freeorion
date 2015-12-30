@@ -10,7 +10,7 @@ import ShipDesignAI
 class ShipyardManager(object):  # TODO: Inherit from base building class...
     """."""  # TODO: Docstring
     name = ""
-    minimum_spacing = 2
+    minimum_spacing = 5
     production_cost = 99999
     production_time = 99999
     prereqs = []
@@ -73,6 +73,13 @@ class ShipyardManager(object):  # TODO: Inherit from base building class...
 
     def _get_candidate_list(self):
         _, _, old_locs, old_best_rating = ProductionAI.get_best_ship_info(self.ai_priority)
+        # old_stats = self.ship_designer().optimize_design(consider_fleet_count=False)
+        # if not old_stats:
+        #     old_best_rating = ShipDesignAI.INVALID_DESIGN_RATING
+        #     old_locs = []
+        # else:
+        #     old_best_rating = old_stats[0][0]
+        #     old_locs = [tup[1] for tup in old_stats if tup[0] == old_best_rating]
         candidates = []
         best_rating = old_best_rating
         print "Old best rating: %.2f" % old_best_rating
@@ -108,8 +115,8 @@ class ShipyardManager(object):  # TODO: Inherit from base building class...
         return candidate_list
 
     def _get_rating_improvements(self, pid):
-        old_stats = self.ship_designer().optimize_design(loc=pid, consider_fleet_count=True, verbose=False)
-        new_stats = self.ship_designer().optimize_design(loc=pid, consider_fleet_count=True,
+        old_stats = self.ship_designer().optimize_design(loc=pid, consider_fleet_count=False, verbose=False)
+        new_stats = self.ship_designer().optimize_design(loc=pid, consider_fleet_count=False,
                                                          additional_parts=self.unlocked_parts,
                                                          additional_hulls=self.unlocked_hulls,
                                                          verbose=False)
@@ -358,6 +365,16 @@ class AsteroidRefinementManager(AsteroidShipyardManager):
         self.system_prereqs.append(AsteroidShipyardManager.name)
 
 
+class NeutroniumForgeManager(BasicShipyardManager):
+    name = "BLD_NEUTRONIUM_FORGE"
+
+    def __init__(self):
+        self._reset_lists()
+        self.unlocked_parts.append("AR_NEUTRONIUM_PLATE")
+        BasicShipyardManager.__init__(self)
+        self.prereqs.append(BasicShipyardManager.name)
+
+
 class ShipyardLocationCandidate(object):
     """."""  # TODO Docstring
     INVALID_DISTANCE = 9999
@@ -433,6 +450,7 @@ shipyard_map = {manager.name: manager for manager in
                     EnergySolarShipyardManager,
                     AsteroidShipyardManager,
                     AsteroidRefinementManager,
+                    NeutroniumForgeManager,
                 ]}
 
 
