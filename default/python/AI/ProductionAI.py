@@ -14,7 +14,7 @@ import ShipDesignAI
 from turn_state import state
 
 from EnumsAI import (PriorityType, EmpireProductionTypes, MissionType, get_priority_production_types,
-                     FocusType, ShipRoleType, ShipDesignTypes)
+                     FocusType, ShipRoleType)
 from freeorion_tools import dict_from_map, ppstring, chat_human, tech_is_complete, print_error
 from TechsListsAI import EXOBOT_TECH_NAME
 from common.print_utils import Table, Sequence, Text
@@ -32,7 +32,11 @@ def find_best_designs_this_turn():
     """Calculate the best designs for each ship class available at this turn."""
     ShipDesignAI.Cache.update_for_new_turn()
     _design_cache.clear()
-    _design_cache[PriorityType.PRODUCTION_MILITARY] = ShipDesignAI.MilitaryShipDesigner().optimize_design()
+    best_military_stats = ShipDesignAI.MilitaryShipDesigner().optimize_design()
+    best_carrier_stats = ShipDesignAI.CarrierShipDesigner().optimize_design()
+    best_stats = best_military_stats + best_carrier_stats
+    best_stats.sort(reverse=True)
+    _design_cache[PriorityType.PRODUCTION_MILITARY] = best_stats
     _design_cache[PriorityType.PRODUCTION_ORBITAL_INVASION] = ShipDesignAI.OrbitalTroopShipDesigner().optimize_design()
     _design_cache[PriorityType.PRODUCTION_INVASION] = ShipDesignAI.StandardTroopShipDesigner().optimize_design()
     _design_cache[PriorityType.PRODUCTION_COLONISATION] = ShipDesignAI.StandardColonisationShipDesigner().optimize_design()
