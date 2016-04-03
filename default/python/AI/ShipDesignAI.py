@@ -1466,7 +1466,7 @@ class ShipDesigner(object):
 
         :rtype: float
         """
-        enemy_dmg = self.additional_specifications.enemy_weapon_strength
+        enemy_dmg = self.additional_specifications.max_enemy_weapon_strength
         return max(enemy_dmg / max(0.01, enemy_dmg - self.shields), 1)
 
     def _effective_fuel(self):
@@ -1607,17 +1607,8 @@ class MilitaryShipDesigner(ShipDesigner):
         total_dmg = max(self._total_dmg_vs_shields(), self._total_dmg() / 1000)
         if total_dmg <= 0:
             return INVALID_DESIGN_RATING
-<<<<<<< HEAD
         effective_structure = self.structure + self._expected_organic_growth() + self._remaining_growth()/5
         effective_structure *= self._shield_factor()
-=======
-        enemy_dmg = self.additional_specifications.max_enemy_weapon_strength
-        shield_factor = max(enemy_dmg / max(0.01, enemy_dmg - self.shields), 1)
-        expected_growth = min(self.additional_specifications.expected_turns_till_fight * self.organic_growth,
-                              self.maximum_organic_growth)
-        remaining_growth = self.maximum_organic_growth - expected_growth
-        effective_structure = (self.structure + expected_growth + remaining_growth/5) * shield_factor
->>>>>>> Reimplement Rating functions in new module
         speed_factor = 1 + 0.005*(self.speed - 85)
         fuel_factor = 1 + 0.03*(self._effective_fuel() - self._minimum_fuel())**0.5
         return total_dmg * effective_structure * speed_factor * fuel_factor / self._adjusted_production_cost()
@@ -1708,14 +1699,11 @@ class CarrierShipDesigner(ShipDesigner):  # TODO consider inheriting from Milita
             return INVALID_DESIGN_RATING
         # first, calculate "normal" weapon stuff
         weapon_dmg = max(self._total_dmg_vs_shields(), self._total_dmg() / 1000)
-        enemy_dmg_max = self.additional_specifications.max_enemy_weapon_strength
-        enemy_dmg_avg = self.additional_specifications.avg_enemy_weapon_strength
-        shield_factor = max(enemy_dmg_max / max(0.01, enemy_dmg_max - self.shields), 1)
-        expected_growth = min(self.additional_specifications.expected_turns_till_fight * self.organic_growth,
-                              self.maximum_organic_growth)
-        remaining_growth = self.maximum_organic_growth - expected_growth
+        effective_structure = self.structure + self._expected_organic_growth() + self._remaining_growth()/5
+        effective_structure *= self._shield_factor()
 
         # now, consider offensive potential of our fighters
+        enemy_dmg_avg = self.additional_specifications.avg_enemy_weapon_strength
         launched_1st_bout = min(self.fighter_capacity, self.fighter_launch_rate)
         launched_2nd_bout = min(self.fighter_capacity - self.fighter_launch_rate, self.fighter_launch_rate)
         survival_rate = .2  # chance of a fighter launched in bout 1 to live in turn 3 TODO Actual estimation
@@ -1727,7 +1715,7 @@ class CarrierShipDesigner(ShipDesigner):  # TODO consider inheriting from Milita
         damage_prevented = fighters_shot_down * enemy_dmg_avg  # TODO: Some shields calculations...
 
         total_dmg = weapon_dmg + fighter_damage_per_bout
-        effective_structure = (self.structure + expected_growth + remaining_growth/5) * shield_factor + damage_prevented
+        effective_structure += damage_prevented
 
         speed_factor = 1 + 0.005*(self.speed - 85)
         fuel_factor = 1 + 0.03*(self._effective_fuel() - self._minimum_fuel())**0.5
