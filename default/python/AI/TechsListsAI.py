@@ -81,7 +81,7 @@ class TechGroup(object):
 
                 try:
                     tech_name = this_list.pop(0)
-                except IndexError as e:
+                except IndexError:
                     # Do not display error message as those should be shown only once per game session
                     # by the initial test_tech_integrity() call.
                     msg = "Try to enqueue tech from empty list"
@@ -271,7 +271,7 @@ class TechGroup2SparseA(TechGroup2):
     def __init__(self):
         super(TechGroup2SparseA, self).__init__()
         self.enqueue(
-            self.hul,
+            self.hull,
             self.economy,
             self.economy,
             self.armor,
@@ -415,7 +415,7 @@ class TechGroup3B(TechGroup3):
     def __init__(self):
         super(TechGroup3B, self).__init__()
         self.enqueue(
-            self.hul,
+            self.hull,
             self.economy,
             self.defense,
             self.defense,
