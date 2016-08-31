@@ -71,7 +71,7 @@ class TechGroup(object):
         If the list is already empty, the exception is caught and stored in self.__errors.
         Ecxeptions may be queried via get_errors()
 
-        :type this_list: list | str
+        :type tech_lists: list[list | str]
         """
 
         for this_list in tech_lists:
