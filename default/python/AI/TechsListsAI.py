@@ -57,8 +57,9 @@ class TechGroup(object):
     def get_techs(self):
         """Get the ordered list of techs defining research order.
 
+        :return: Research order
         :rtype: list
-        :return: Research order"""
+        """
         self._add_remaining_techs()
         return list(self._ordered_list)
 
