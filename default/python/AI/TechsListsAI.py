@@ -44,15 +44,15 @@ class TechGroup(object):
         self.defense = []     # planetary defense techs
         self.hull = []        # new hull types
 
-        self._ordered_list = []    # defines the research order - forced to contain all techs.
+        self._tech_queue = []    # defines the research order - forced to contain all techs.
         self._errors = []          # exceptions that occured when trying to pop from already empty lists
 
     def _add_remaining(self):
-        """Add all remaining techs in the tech group to self.__ordered_list if not already contained."""
+        """Add all remaining techs in the tech group to self._tech_queue if not already contained."""
         all_needed_techs = set(self.economy + self.weapon + self.armor
                                + self.misc + self.defense + self.hull)
-        remaining_techs = list(all_needed_techs - set(self._ordered_list))
-        self._ordered_list.extend(remaining_techs)
+        remaining_techs = list(all_needed_techs - set(self._tech_queue))
+        self._tech_queue.extend(remaining_techs)
 
     def get_techs(self):
         """Get the ordered list of techs defining research order.
@@ -61,7 +61,7 @@ class TechGroup(object):
         :rtype: list
         """
         self._add_remaining()
-        return list(self._ordered_list)
+        return list(self._tech_queue)
 
     def enqueue(self, *tech_lists):
         """
@@ -88,12 +88,12 @@ class TechGroup(object):
                     print >> sys.stderr, msg
                     self._errors.append(msg)
                     continue
-            if tech_name in self._ordered_list:
+            if tech_name in self._tech_queue:
                 msg = "Tech is already in queue: %s" % tech_name
                 print >> sys.stderr, msg
                 self._errors.append(msg)
             else:
-                self._ordered_list.append(tech_name)
+                self._tech_queue.append(tech_name)
 
     def get_errors(self):
         """Return a list of occured exceptions.
@@ -520,7 +520,7 @@ class TechGroup4(TechGroup):
 class TechGroup5(TechGroup):
     def __init__(self):
         super(TechGroup5, self).__init__()
-        self._ordered_list.extend([
+        self._tech_queue.extend([
             "LRN_DISTRIB_THOUGHT",
             "DEF_GARRISON_4",
             "DEF_PLAN_BARRIER_SHLD_4",
