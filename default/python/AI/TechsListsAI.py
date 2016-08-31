@@ -84,7 +84,7 @@ class TechGroup(object):
                 except IndexError as e:
                     # Do not display error message as those should be shown only once per game session
                     # by the initial test_tech_integrity() call.
-                    msg = "Try to enqueue tech from empty list: %s" % e
+                    msg = "Try to enqueue tech from empty list"
                     print >> sys.stderr, msg
                     self._errors.append(msg)
                     continue
