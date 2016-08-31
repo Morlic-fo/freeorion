@@ -63,14 +63,6 @@ class TechGroup(object):
         self._add_remaining_techs()
         return list(self._ordered_list)
 
-    @staticmethod
-    def pop_tech(this_list):
-        """Pop and return the first element of the list.
-
-        Note that the passed list is modified within this function!
-        """
-        return this_list.pop(0)
-
     def add_tech(self, this_list):
         """Pop first entry in the list and add it to research orders.
 
@@ -81,7 +73,7 @@ class TechGroup(object):
         :type this_list: list
         """
         try:
-            self._ordered_list.append(self.pop_tech(this_list))
+            self._ordered_list.append(this_list.pop(0))
         except IndexError as e:
             # Do not display error message as those should be shown only once per game session
             # by the initial test_tech_integrity() call.
