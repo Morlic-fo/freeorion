@@ -63,28 +63,31 @@ class TechGroup(object):
         self._add_remaining()
         return list(self._ordered_list)
 
-    def enqueue_by_name(self, *tech_names):
+    def enqueue(self, *tech_lists):
         """
-        Enqueue tech by name.
-        """
-        self._ordered_list.extend(tech_names)
-
-    def enqueue(self, this_list):
-        """Pop first entry in the list and add it to research orders.
+        Pop first entry in the list or take entry if it is string and add it to research orders.
 
         Note that the passed list is modified within this function!
         If the list is already empty, the exception is caught and stored in self.__errors.
         Ecxeptions may be queried via get_errors()
 
-        :type this_list: list
+        :type this_list: list | str
         """
-        try:
-            self._ordered_list.append(this_list.pop(0))
-        except IndexError as e:
-            # Do not display error message as those should be shown only once per game session
-            # by the initial test_tech_integrity() call.
-            print >> sys.stderr, e
-            self._errors.append(e)
+
+        for this_list in tech_lists:
+            if isinstance(this_list, str):
+                tech_name = this_list
+            else:
+
+                try:
+                    tech_name = this_list.pop(0)
+                except IndexError as e:
+                    # Do not display error message as those should be shown only once per game session
+                    # by the initial test_tech_integrity() call.
+                    print >> sys.stderr, "Try to enqueue tech from empty list:", e
+                    self._errors.append(e)
+                    continue
+            self._ordered_list.append(tech_name)
 
     def get_errors(self):
         """Return a list of occured exceptions.
@@ -119,56 +122,67 @@ class TechGroup1(TechGroup):
             "SHP_MIL_ROBO_CONT",
         ])
         # always start with the same first 6 techs
-        self.enqueue(self.economy)
-        self.enqueue(self.economy)
-        self.enqueue(self.economy)
-        self.enqueue(self.economy)
-        self.enqueue(self.weapon)
-        self.enqueue(self.defense)
+        self.enqueue(
+            self.economy,
+            self.economy,
+            self.economy,
+            self.economy,
+            self.weapon,
+            self.defense,
+        )
 
 
 class TechGroup1a(TechGroup1):
     def __init__(self):
         super(TechGroup1a, self).__init__()
-        self.enqueue(self.weapon)
-        self.enqueue(self.weapon)
-        self.enqueue(self.economy)
-        self.enqueue(self.economy)
-        self.enqueue(self.hull)
+        self.enqueue(
+            self.weapon,
+            self.weapon,
+            self.economy,
+            self.economy,
+            self.hull
+        )
 
 
 class TechGroup1b(TechGroup1):
     def __init__(self):
         super(TechGroup1b, self).__init__()
-        self.enqueue(self.weapon)
-        self.enqueue(self.hull)
-        self.enqueue(self.economy)
-        self.enqueue(self.weapon)
+        self.enqueue(
+            self.weapon,
+            self.hull,
+            self.economy,
+            self.weapon
+        )
 
 
 class TechGroup1SparseA(TechGroup1):
     def __init__(self):
         super(TechGroup1SparseA, self).__init__()
-        self.enqueue(self.economy)
-        self.enqueue(self.economy)
-        self.enqueue(self.hull)
-        self.enqueue(self.weapon)
-        self.enqueue(self.weapon)
-        self.enqueue_by_name("SHP_SPACE_FLUX_DRIVE")
+        self.enqueue(
+            self.economy,
+            self.economy,
+            self.hull,
+            self.weapon,
+            self.weapon,
+            "SHP_SPACE_FLUX_DRIVE"
+        )
 
 
 class TechGroup1SparseB(TechGroup1):
     def __init__(self):
         super(TechGroup1SparseB, self).__init__()
-        self.enqueue(self.economy)
-        self.enqueue(self.economy)
-        self.enqueue_by_name("PRO_FUSION_GEN")
-        self.enqueue_by_name("GRO_SYMBIOTIC_BIO")
-        self.enqueue(self.weapon)
-        self.enqueue(self.weapon)
-        self.enqueue_by_name("PRO_ORBITAL_GEN")
-        self.enqueue(self.hull)
-        self.enqueue_by_name("SHP_ZORTRIUM_PLATE", "SHP_SPACE_FLUX_DRIVE")
+        self.enqueue(
+            self.economy,
+            self.economy,
+            "PRO_FUSION_GEN",
+            "GRO_SYMBIOTIC_BIO",
+            self.weapon,
+            self.weapon,
+            "PRO_ORBITAL_GEN",
+            self.hull,
+            "SHP_ZORTRIUM_PLATE",
+            "SHP_SPACE_FLUX_DRIVE"
+        )
 
 
 class TechGroup2(TechGroup):
@@ -208,77 +222,85 @@ class TechGroup2(TechGroup):
 class TechGroup2A(TechGroup2):
     def __init__(self):
         super(TechGroup2A, self).__init__()
-        self.enqueue(self.economy)
-        self.enqueue(self.armor)
-        self.enqueue(self.defense)
-        self.enqueue(self.hull)
-        self.enqueue(self.economy)
-        self.enqueue(self.defense)
-        self.enqueue(self.defense)
-        self.enqueue(self.weapon)
-        self.enqueue(self.weapon)
-        self.enqueue(self.defense)
-        self.enqueue(self.economy)
-        self.enqueue(self.weapon)
-        self.enqueue(self.weapon)
-        self.enqueue(self.economy)
+        self.enqueue(
+            self.economy,
+            self.armor,
+            self.defense,
+            self.hull,
+            self.economy,
+            self.defense,
+            self.defense,
+            self.weapon,
+            self.weapon,
+            self.defense,
+            self.economy,
+            self.weapon,
+            self.weapon,
+            self.economy
+        )
 
 
 class TechGroup2B(TechGroup2):
     def __init__(self):
         super(TechGroup2B, self).__init__()
-        self.enqueue(self.armor)
-        self.enqueue(self.hull)
-        self.enqueue(self.economy)
-        self.enqueue(self.defense)
-        self.enqueue(self.weapon)
-        self.enqueue(self.weapon)
-        self.enqueue(self.economy)
-        self.enqueue(self.defense)
-        self.enqueue(self.defense)
-        self.enqueue(self.defense)
-        self.enqueue(self.weapon)
-        self.enqueue(self.weapon)
-        self.enqueue(self.economy)
-        self.enqueue(self.economy)
+        self.enqueue(
+            self.armor,
+            self.hull,
+            self.economy,
+            self.defense,
+            self.weapon,
+            self.weapon,
+            self.economy,
+            self.defense,
+            self.defense,
+            self.defense,
+            self.weapon,
+            self.weapon,
+            self.economy,
+            self.economy
+        )
 
 
 class TechGroup2SparseA(TechGroup2):
     def __init__(self):
         super(TechGroup2SparseA, self).__init__()
-        self.enqueue(self.hull)
-        self.enqueue(self.economy)
-        self.enqueue(self.economy)
-        self.enqueue(self.armor)
-        self.enqueue(self.defense)
-        self.enqueue(self.economy)
-        self.enqueue(self.economy)
-        self.enqueue(self.defense)
-        self.enqueue(self.defense)
-        self.enqueue(self.weapon)
-        self.enqueue(self.weapon)
-        self.enqueue(self.defense)
-        self.enqueue(self.weapon)
-        self.enqueue(self.weapon)
+        self.enqueue(
+            self.hul,
+            self.economy,
+            self.economy,
+            self.armor,
+            self.defense,
+            self.economy,
+            self.economy,
+            self.defense,
+            self.defense,
+            self.weapon,
+            self.weapon,
+            self.defense,
+            self.weapon,
+            self.weapon
+        )
 
 
 class TechGroup2SparseB(TechGroup2):
     def __init__(self):
         super(TechGroup2SparseB, self).__init__()
-        self.enqueue(self.hull)
-        self.enqueue(self.economy)
-        self.enqueue(self.economy)
-        self.enqueue(self.economy)
-        self.enqueue(self.economy)
-        self.enqueue(self.defense)
-        self.enqueue(self.defense)
-        self.enqueue(self.weapon)
-        self.enqueue(self.weapon)
-        self.enqueue(self.defense)
-        self.enqueue(self.defense)
-        self.enqueue(self.armor)
-        self.enqueue(self.weapon)
-        self.enqueue(self.weapon)
+        self.enqueue(
+            self.hull,
+            self.economy,
+            self.economy,
+            self.economy,
+            self.economy,
+            self.defense,
+            self.defense,
+            self.weapon,
+            self.weapon,
+            self.defense,
+            self.defense,
+            self.armor,
+            self.weapon,
+            self.weapon
+        )
 
 
 class TechGroup3(TechGroup):
@@ -340,133 +362,139 @@ class TechGroup3(TechGroup):
 class TechGroup3A(TechGroup3):
     def __init__(self):
         super(TechGroup3A, self).__init__()
-        self.enqueue(self.hull)
-        self.enqueue(self.economy)
-        self.enqueue(self.defense)
-        self.enqueue(self.defense)
-        self.enqueue(self.economy)
-        self.enqueue(self.economy)
-        self.enqueue(self.economy)
-        self.enqueue(self.defense)
-        self.enqueue(self.misc)
-        self.enqueue(self.defense)
-        self.enqueue(self.economy)
-        self.enqueue(self.misc)
-        self.enqueue(self.misc)
-        self.enqueue(self.economy)
-        self.enqueue(self.misc)
-        self.enqueue(self.hull)
-        self.enqueue(self.hull)
-        self.enqueue(self.misc)
-        self.enqueue(self.economy)
-        self.enqueue(self.hull)
-        self.enqueue(self.economy)
-        self.enqueue(self.defense)
-        self.enqueue(self.misc)
-        self.enqueue(self.armor)
-        self.enqueue(self.defense)
-        self.enqueue(self.defense)
-        self.enqueue(self.defense)
-        self.enqueue(self.misc)
-        self.enqueue(self.economy)
-        self.enqueue(self.misc)
-        self.enqueue(self.defense)
-        self.enqueue(self.defense)
-        self.enqueue(self.economy)
-        self.enqueue(self.misc)
-        self.enqueue(self.economy)
-        self.enqueue(self.weapon)
-        self.enqueue(self.weapon)
-        self.enqueue(self.weapon)
-        self.enqueue(self.weapon)
+        self.enqueue(
+            self.hull,
+            self.economy,
+            self.defense,
+            self.defense,
+            self.economy,
+            self.economy,
+            self.economy,
+            self.defense,
+            self.misc,
+            self.defense,
+            self.economy,
+            self.misc,
+            self.misc,
+            self.economy,
+            self.misc,
+            self.hull,
+            self.hull,
+            self.misc,
+            self.economy,
+            self.hull,
+            self.economy,
+            self.defense,
+            self.misc,
+            self.armor,
+            self.defense,
+            self.defense,
+            self.defense,
+            self.misc,
+            self.economy,
+            self.misc,
+            self.defense,
+            self.defense,
+            self.economy,
+            self.misc,
+            self.economy,
+            self.weapon,
+            self.weapon,
+            self.weapon,
+            self.weapon
+        )
 
 
 class TechGroup3B(TechGroup3):
     def __init__(self):
         super(TechGroup3B, self).__init__()
-        self.enqueue(self.hull)
-        self.enqueue(self.economy)
-        self.enqueue(self.defense)
-        self.enqueue(self.defense)
-        self.enqueue(self.economy)
-        self.enqueue(self.economy)
-        self.enqueue(self.economy)
-        self.enqueue(self.weapon)
-        self.enqueue(self.weapon)
-        self.enqueue(self.defense)
-        self.enqueue(self.misc)
-        self.enqueue(self.defense)
-        self.enqueue(self.economy)
-        self.enqueue(self.weapon)
-        self.enqueue(self.misc)
-        self.enqueue(self.misc)
-        self.enqueue(self.economy)
-        self.enqueue(self.misc)
-        self.enqueue(self.weapon)
-        self.enqueue(self.hull)
-        self.enqueue(self.hull)
-        self.enqueue(self.misc)
-        self.enqueue(self.economy)
-        self.enqueue(self.hull)
-        self.enqueue(self.economy)
-        self.enqueue(self.defense)
-        self.enqueue(self.misc)
-        self.enqueue(self.armor)
-        self.enqueue(self.defense)
-        self.enqueue(self.defense)
-        self.enqueue(self.defense)
-        self.enqueue(self.misc)
-        self.enqueue(self.economy)
-        self.enqueue(self.misc)
-        self.enqueue(self.defense)
-        self.enqueue(self.defense)
-        self.enqueue(self.economy)
-        self.enqueue(self.misc)
-        self.enqueue(self.economy)
+        self.enqueue(
+            self.hul,
+            self.economy,
+            self.defense,
+            self.defense,
+            self.economy,
+            self.economy,
+            self.economy,
+            self.weapon,
+            self.weapon,
+            self.defense,
+            self.misc,
+            self.defense,
+            self.economy,
+            self.weapon,
+            self.misc,
+            self.misc,
+            self.economy,
+            self.misc,
+            self.weapon,
+            self.hull,
+            self.hull,
+            self.misc,
+            self.economy,
+            self.hull,
+            self.economy,
+            self.defense,
+            self.misc,
+            self.armor,
+            self.defense,
+            self.defense,
+            self.defense,
+            self.misc,
+            self.economy,
+            self.misc,
+            self.defense,
+            self.defense,
+            self.economy,
+            self.misc,
+            self.economy
+        )
 
 
 class TechGroup3Sparse(TechGroup3):
     def __init__(self):
         super(TechGroup3Sparse, self).__init__()
-        self.enqueue(self.hull)
-        self.enqueue(self.economy)
-        self.enqueue(self.economy)
-        self.enqueue(self.economy)
-        self.enqueue(self.economy)
-        self.enqueue(self.defense)
-        self.enqueue(self.defense)
-        self.enqueue(self.misc)
-        self.enqueue(self.economy)
-        self.enqueue(self.weapon)
-        self.enqueue(self.weapon)
-        self.enqueue(self.defense)
-        self.enqueue(self.defense)
-        self.enqueue(self.weapon)
-        self.enqueue(self.misc)
-        self.enqueue(self.misc)
-        self.enqueue(self.economy)
-        self.enqueue(self.misc)
-        self.enqueue(self.weapon)
-        self.enqueue(self.hull)
-        self.enqueue(self.hull)
-        self.enqueue(self.misc)
-        self.enqueue(self.economy)
-        self.enqueue(self.hull)
-        self.enqueue(self.economy)
-        self.enqueue(self.defense)
-        self.enqueue(self.misc)
-        self.enqueue(self.armor)
-        self.enqueue(self.defense)
-        self.enqueue(self.defense)
-        self.enqueue(self.defense)
-        self.enqueue(self.misc)
-        self.enqueue(self.economy)
-        self.enqueue(self.misc)
-        self.enqueue(self.defense)
-        self.enqueue(self.defense)
-        self.enqueue(self.economy)
-        self.enqueue(self.misc)
-        self.enqueue(self.economy)
+        self.enqueue(
+            self.hull,
+            self.economy,
+            self.economy,
+            self.economy,
+            self.economy,
+            self.defense,
+            self.defense,
+            self.misc,
+            self.economy,
+            self.weapon,
+            self.weapon,
+            self.defense,
+            self.defense,
+            self.weapon,
+            self.misc,
+            self.misc,
+            self.economy,
+            self.misc,
+            self.weapon,
+            self.hull,
+            self.hull,
+            self.misc,
+            self.economy,
+            self.hull,
+            self.economy,
+            self.defense,
+            self.misc,
+            self.armor,
+            self.defense,
+            self.defense,
+            self.defense,
+            self.misc,
+            self.economy,
+            self.misc,
+            self.defense,
+            self.defense,
+            self.economy,
+            self.misc,
+            self.economy
+        )
 
 
 class TechGroup4(TechGroup):
@@ -477,8 +505,10 @@ class TechGroup4(TechGroup):
             "SHP_MASSPROP_SPEC",
             "SHP_SCAT_AST_HULL",
         ])
-        self.enqueue(self.hull)
-        self.enqueue(self.hull)
+        self.enqueue(
+            self.hull,
+            self.hull
+        )
 
 
 class TechGroup5(TechGroup):
