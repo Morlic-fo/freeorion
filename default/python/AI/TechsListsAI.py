@@ -69,7 +69,7 @@ class TechGroup(object):
 
         Note that the passed list is modified within this function!
         If the list is already empty, the exception is caught and stored in self.__errors.
-        Ecxeptions may be queried via get_errors()
+        Errors may be queried via get_errors()
 
         :type tech_lists: list[list | str]
         """
