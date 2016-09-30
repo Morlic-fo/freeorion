@@ -14,7 +14,7 @@ import ShipDesignAI
 from turn_state import state
 
 from EnumsAI import (PriorityType, EmpireProductionTypes, MissionType, get_priority_production_types,
-                     FocusType, ShipRoleType, ShipDesignTypes)
+                     FocusType, ShipRoleType)
 from freeorion_tools import dict_from_map, ppstring, chat_human, tech_is_complete, print_error
 from TechsListsAI import EXOBOT_TECH_NAME
 from common.print_utils import Table, Sequence, Text
@@ -32,7 +32,11 @@ def find_best_designs_this_turn():
     """Calculate the best designs for each ship class available at this turn."""
     ShipDesignAI.Cache.update_for_new_turn()
     _design_cache.clear()
-    _design_cache[PriorityType.PRODUCTION_MILITARY] = ShipDesignAI.MilitaryShipDesigner().optimize_design()
+    best_military_stats = ShipDesignAI.MilitaryShipDesigner().optimize_design()
+    best_carrier_stats = ShipDesignAI.CarrierShipDesigner().optimize_design()
+    best_stats = best_military_stats + best_carrier_stats
+    best_stats.sort(reverse=True)
+    _design_cache[PriorityType.PRODUCTION_MILITARY] = best_stats
     _design_cache[PriorityType.PRODUCTION_ORBITAL_INVASION] = ShipDesignAI.OrbitalTroopShipDesigner().optimize_design()
     _design_cache[PriorityType.PRODUCTION_INVASION] = ShipDesignAI.StandardTroopShipDesigner().optimize_design()
     _design_cache[PriorityType.PRODUCTION_COLONISATION] = ShipDesignAI.StandardColonisationShipDesigner().optimize_design()
@@ -82,11 +86,8 @@ def cur_best_military_design_rating():
     if priority in _design_cache:
         if _design_cache[priority] and _design_cache[priority][0]:
             rating, pid, design_id, cost = _design_cache[priority][0]
-            pilots = fo.getUniverse().getPlanet(pid).speciesName
-            ship_id = -1  # no existing ship
-            design_rating = foAI.foAIstate.rate_psuedo_fleet(ship_info=[(ship_id, design_id, pilots)])['overall']
-            _best_military_design_rating_cache[current_turn] = design_rating
-            return max(design_rating, 0.001)
+            _best_military_design_rating_cache[current_turn] = rating
+            return max(rating, 0.001)
         else:
             return 0.001
     else:
