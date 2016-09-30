@@ -53,7 +53,7 @@ from collections import Counter, defaultdict
 from EnumsAI import ShipDesignTypes
 from freeorion_tools import print_error, UserString, tech_is_complete
 
-# Define meta classes for the ship parts
+# Define meta classes for the ship parts  TODO storing as set may not be needed anymore
 ARMOUR = frozenset({fo.shipPartClass.armour})
 SHIELDS = frozenset({fo.shipPartClass.shields})
 DETECTION = frozenset({fo.shipPartClass.detection})
@@ -1424,11 +1424,43 @@ class ShipDesigner(object):
         else:
             return self.production_cost / (1 + foAI.foAIstate.shipCount * AIDependencies.SHIP_UPKEEP)  # base cost
 
+    def _shield_factor(self):
+        """Calculate the effective factor by which structure is increased by shields.
+
+        :rtype: float
+        """
+        enemy_dmg = self.additional_specifications.enemy_weapon_strength
+        return max(enemy_dmg / max(0.01, enemy_dmg - self.shields), 1)
+
     def _effective_fuel(self):
-        """Return the number of turns the ship can move without refueling."""
+        """Return the number of turns the ship can move without refueling.
+
+        :rtype: float
+        """
         return min(self.fuel / max(1 - self.fuel_per_turn, 0.001), 10)
 
+    def _expected_organic_growth(self):
+        """Get expected organic growth defined by growth rate and expected numbers till fight.
+
+        :return: Expected organic growth
+        :rtype: float
+        """
+        return min(self.additional_specifications.expected_turns_till_fight * self.organic_growth,
+                   self.maximum_organic_growth)
+
+    def _remaining_growth(self):
+        """Get growth potential after _expected_organic_growth() took place.
+
+        :return: Remaining growth after _expected_organic_growth()
+        :rtype: float
+        """
+        return self.maximum_organic_growth - self._expected_organic_growth()
+
     def _effective_mine_damage(self):
+        """Return enemy mine damage corrected by self-repair-rate.
+
+        :rtype: float
+        """
         return self.additional_specifications.enemy_mine_dmg - self.repair_per_turn
 
     def _partclass_in_design(self, partclass):
@@ -1460,7 +1492,6 @@ class ShipDesigner(object):
         for tech, dmg_bonus in upgrades:
             total_tech_bonus += dmg_bonus if tech_is_complete(tech) else 0
             # TODO: Error checking if tech is actually a valid tech (tech_is_complete simply returns false)
-
         # species modifiers
         if not ignore_species:
             species_modifier = AIDependencies.PILOT_DAMAGE_MODIFIER_DICT.get(self.weapons_grade, {}).get(weapon_name, 0)
@@ -1474,7 +1505,6 @@ class ShipDesigner(object):
         if not base_shots:
             print "WARNING: Queried weapon %s for number of shots but didn't return any." % weapon_name
             base_shots = 1
-
         # species modifier
         if not ignore_species:
             species_modifier = AIDependencies.PILOT_ROF_MODIFIER_DICT.get(self.weapons_grade, {}).get(weapon_name, 0)
@@ -1536,12 +1566,8 @@ class MilitaryShipDesigner(ShipDesigner):
         total_dmg = max(self._total_dmg_vs_shields(), self._total_dmg() / 1000)
         if total_dmg <= 0:
             return INVALID_DESIGN_RATING
-        enemy_dmg = self.additional_specifications.enemy_weapon_strength
-        shield_factor = max(enemy_dmg / max(0.01, enemy_dmg - self.shields), 1)
-        expected_growth = min(self.additional_specifications.expected_turns_till_fight * self.organic_growth,
-                              self.maximum_organic_growth)
-        remaining_growth = self.maximum_organic_growth - expected_growth
-        effective_structure = (self.structure + expected_growth + remaining_growth/5) * shield_factor
+        effective_structure = self.structure + self._expected_organic_growth() + self._remaining_growth()/5
+        effective_structure *= self._shield_factor()
         speed_factor = 1 + 0.005*(self.speed - 85)
         fuel_factor = 1 + 0.03*(self._effective_fuel() - self._minimum_fuel())**0.5
         return total_dmg * effective_structure * speed_factor * fuel_factor / self._adjusted_production_cost()
