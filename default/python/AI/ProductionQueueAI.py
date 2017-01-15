@@ -211,7 +211,7 @@ class ProductionQueueManager(object):
         :return: True if successfully enqueued, otherwise False
         :rtype: bool
         """
-        print "Trying to enqueue %s at %d" % (item, loc)
+        print "Trying to enqueue %s at %s" % (item, PlanetUtilsAI.planet_name_id(loc))
         if item_type == BUILDING:
             production_order = fo.issueEnqueueBuildingProductionOrder
         elif item_type == SHIP:

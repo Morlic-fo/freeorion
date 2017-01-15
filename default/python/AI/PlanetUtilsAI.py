@@ -19,14 +19,23 @@ def sys_name_ids(sys_ids):
     return [str(universe.getSystem(sys_id)) for sys_id in sys_ids]
 
 
+def planet_name_id(planet_id):
+    """
+    Get list of text representing pairs planet name and system id.
+    :param planet_id:
+    :return: list of string <name>:<id>
+    """
+    universe = fo.getUniverse()
+    return fo.to_str('P', planet_id, safe_name(universe.getPlanet(planet_id)))
+
+
 def planet_name_ids(planet_ids):
     """
     Get list of text representing pairs planet name and system id.
     :param planet_ids: list if planet ids
     :return: list of string <name>:<id>
     """
-    universe = fo.getUniverse()
-    return [fo.to_str('P', planet_id, safe_name(universe.getPlanet(planet_id))) for planet_id in planet_ids]
+    return [planet_name_id(planet_id) for planet_id in planet_ids]
 
 
 def get_capital():
