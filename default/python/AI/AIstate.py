@@ -13,6 +13,7 @@ from EnumsAI import MissionType, ShipRoleType
 import CombatRatingsAI
 import MilitaryAI
 import PlanetUtilsAI
+import ProductionQueueAI
 from freeorion_tools import get_partial_visibility_turn
 from universe_object import System
 from AIDependencies import INVALID_ID
@@ -160,6 +161,7 @@ class AIstate(object):
         self.__empire_standard_enemy = CombatRatingsAI.default_ship_stats().get_stats(hashable=True)
         self.empire_standard_enemy_rating = 0  # TODO: track on a per-empire basis
         self.character = create_character(aggression, self.empireID)
+        self.production_queue_manager = ProductionQueueAI.ProductionQueueManager()
 
     def __setstate__(self, state):
         try:
@@ -225,6 +227,7 @@ class AIstate(object):
 
     def __refresh(self):
         """Turn start AIstate cleanup/refresh."""
+        self.production_queue_manager.update_for_new_turn()
         fleetsLostBySystem.clear()
         invasionTargets[:] = []
 

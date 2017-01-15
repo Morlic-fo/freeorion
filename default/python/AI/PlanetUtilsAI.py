@@ -32,7 +32,6 @@ def planet_string(planet_ids):
     :param planet_ids: list of planet ids or single id
     :rtype: str
     """
-
     def _safe_planet_name(planet_id):
         planet = fo.getUniverse().getPlanet(planet_id)
         return fo.to_str('P', planet_id, (planet and planet.name) or "?")

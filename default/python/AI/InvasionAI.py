@@ -14,6 +14,7 @@ import ProductionAI
 import ColonisationAI
 import MilitaryAI
 from EnumsAI import MissionType, PriorityType
+from ProductionQueueAI import SHIP, ProductionPriority as Priority
 import CombatRatingsAI
 from freeorion_tools import tech_is_complete, AITimer, get_partial_visibility_turn
 from AIDependencies import INVALID_ID
@@ -196,15 +197,13 @@ def get_invasion_fleets():
                 continue
             print "Invasion base planning, need %d troops at %d pership, will build %d ships." % (
                 (planet_troops + 1), troops_per_ship, n_bases)
-            retval = fo.issueEnqueueShipProductionOrder(col_design.id, loc)
-            print "Enqueueing %d Troop Bases at %s for %s" % (n_bases, PlanetUtilsAI.planet_string(loc),
-                                                              PlanetUtilsAI.planet_string(pid))
+            for i in range(n_bases):
+                retval = foAI.foAIstate.production_queue_manager.enqueue_item(SHIP, col_design.id, loc,
+                                                                              Priority.ship_orbital_troops)
             if retval != 0:
                 all_invasion_targeted_system_ids.add(planet.systemID)
                 reserved_troop_base_targets.append(pid)
                 foAI.foAIstate.qualifyingTroopBaseTargets[pid][1] = loc
-                fo.issueChangeProductionQuantityOrder(empire.productionQueue.size - 1, 1, int(n_bases))
-                fo.issueRequeueProductionOrder(empire.productionQueue.size - 1, 0)
 
     invasion_timer.start("evaluating target planets")
     # TODO: check if any invasion_targeted_planet_ids need more troops assigned
