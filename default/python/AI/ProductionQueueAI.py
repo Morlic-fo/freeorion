@@ -58,10 +58,13 @@ class ProductionQueueManager(object):
         self._last_update = -1                  # turn in which the queue was last updated
 
     def __getstate__(self):
-        return tuple(self._production_queue)
+        return tuple(self._production_queue), self._number_of_invalid_priorities
 
     def __setstate__(self, state):
-        self._production_queue = list(state)
+        self.__init__()
+        self._production_queue = list(state[0])
+        self._number_of_invalid_priorities = state[1]
+        self._last_update = -1
 
     def __len__(self):
         return len(self._production_queue)
