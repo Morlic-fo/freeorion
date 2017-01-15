@@ -14,6 +14,7 @@ from EnumsAI import MissionType, ShipRoleType
 import CombatRatingsAI
 import MilitaryAI
 import PlanetUtilsAI
+import ProductionQueueAI
 from freeorion_tools import dict_from_map
 from universe_object import System
 from AIDependencies import INVALID_ID
@@ -94,6 +95,7 @@ class AIstate(object):
         self.__empire_standard_enemy = CombatRatingsAI.default_ship_stats().get_stats(hashable=True)  # TODO: track on a per-empire basis
         self.empire_standard_enemy_rating = 0  # TODO: track on a per-empire basis
         self.character = create_character(aggression, self.empireID)
+        self.production_queue_manager = ProductionQueueAI.ProductionQueueManager()
 
     def generate_uid(self, first=False):
         """

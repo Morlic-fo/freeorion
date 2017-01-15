@@ -15,6 +15,7 @@ from turn_state import state
 from EnumsAI import MissionType, FocusType, EmpireProductionTypes, ShipRoleType, PriorityType
 from freeorion_tools import dict_from_map, tech_is_complete, get_ai_tag_grade, cache_by_turn, AITimer, print_error
 from AIDependencies import INVALID_ID, POP_CONST_MOD_MAP, POP_SIZE_MOD_MAP
+from ProductionQueueAI import SHIP, ProductionPriority as Priority
 
 colonization_timer = AITimer('getColonyFleets()')
 
@@ -498,13 +499,11 @@ def get_colony_fleets():
                     best_ship = outpost_base_design_ids.pop()
                 else:
                     continue
-            retval = fo.issueEnqueueShipProductionOrder(best_ship, loc)
-            print "Enqueueing Outpost Base at %s for %s with result %s" % (
-                PlanetUtilsAI.planet_name_ids([loc]), PlanetUtilsAI.planet_name_ids([pid]), retval)
+            retval = foAI.foAIstate.production_queue_manager.enqueue_item(SHIP, best_ship, loc,
+                                                                          Priority.ship_orbital_colo)
             if retval:
                 foAI.foAIstate.qualifyingOutpostBaseTargets[pid][1] = loc
                 queued_outpost_bases.append((planet and planet.systemID) or INVALID_ID)
-                # res=fo.issueRequeueProductionOrder(production_queue.size -1, 0) # TODO: evaluate move to front
     colonization_timer.start('Evaluate Primary Colony Opportunities')
 
     evaluated_outpost_planet_ids = list(
