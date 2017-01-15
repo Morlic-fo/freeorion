@@ -136,6 +136,7 @@ class AIstate(object):
 
     def refresh(self):
         """Turn start AIstate cleanup/refresh."""
+        self.production_queue_manager.update_for_new_turn()
         universe = fo.getUniverse()
         # checks exploration border & clears roles/missions of missing fleets & updates fleet locs & threats
         fleetsLostBySystem.clear()
