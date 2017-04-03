@@ -4,6 +4,8 @@ import AIDependencies
 import AIstate
 import ColonisationAI
 import PlanetUtilsAI
+import ProductionAI
+from character.character_module import Aggression
 from freeorion_tools import tech_is_complete, print_error
 from ProductionQueueAI import BUILDING, ProductionPriority as Priority
 from EnumsAI import FocusType
@@ -415,6 +417,85 @@ class EconomyBoostBuildingManager(BuildingManager):
         total_economy_points = total_pp + total_rp*self.RP_TO_PP_CONVERSION_FACTOR
         print 2*WHITESPACE + "Projected boost of economy: %.1f PP, %.1f RP (weighted total of %.1f)" % (total_pp, total_rp, total_economy_points)
         return float(self.production_cost) / max(total_economy_points, 1e-12)
+
+
+class AutoHistoryAnalyzerManager(EconomyBoostBuildingManager):
+    name = "BLD_AUTO_HISTORY_ANALYSER"
+    priority = Priority.building_high
+    minimum_aggression = fo.aggression.typical
+
+    def _flat_research_bonus(self):
+        return 5.0
+
+    def _suitable_locations(self):
+        empire = fo.getEmpire()
+        universe = fo.getUniverse()
+        total_pp = empire.productionPoints
+        history_analyser = "BLD_AUTO_HISTORY_ANALYSER"
+        culture_archives = "BLD_CULTURE_ARCHIVES"
+
+        ARB_LARGE_NUMBER = 1e4
+        conditions = {
+            # aggression: (min_pp, min_turn, min_pp_to_queue_another_one)
+            fo.aggression.beginner: (100, 100, ARB_LARGE_NUMBER),
+            fo.aggression.turtle: (75, 75, ARB_LARGE_NUMBER),
+            fo.aggression.cautious: (60, 60, ARB_LARGE_NUMBER),
+            fo.aggression.typical: (30, 50, ARB_LARGE_NUMBER),
+            fo.aggression.aggressive: (25, 50, ARB_LARGE_NUMBER),
+            fo.aggression.maniacal: (25, 50, 100)
+        }
+
+        min_pp, turn_trigger, min_pp_per_additional = conditions.get(foAI.foAIstate.character.get_trait(Aggression).key,
+                                                                     (ARB_LARGE_NUMBER, ARB_LARGE_NUMBER,
+                                                                      ARB_LARGE_NUMBER))
+        # If we can colonize good planets instead, do not build this.
+        num_colony_targets = 0
+        for pid in ColonisationAI.all_colony_opportunities:
+            try:
+                best_species_score = ColonisationAI.all_colony_opportunities[pid][0][0]
+            except IndexError:
+                continue
+            if best_species_score > 500:
+                num_colony_targets += 1
+
+        num_covered = (ProductionAI.get_number_of_existing_outpost_and_colony_ships() +
+                       ProductionAI.get_number_of_queued_outpost_and_colony_ships())
+        remaining_targets = num_colony_targets - num_covered
+        min_pp *= remaining_targets
+
+        max_enqueued = 1 if total_pp > min_pp or fo.currentTurn() > turn_trigger else 0
+        max_enqueued += int(total_pp / min_pp_per_additional)
+
+        if max_enqueued <= 0:
+            return []
+
+        # find possible locations
+        possible_locations = set()
+        for pid in list(AIstate.popCtrIDs) + list(AIstate.outpostIDs):
+            planet = universe.getPlanet(pid)
+            if not planet or planet.currentMeterValue(fo.meterType.targetPopulation) < 1:
+                continue
+            buildings_here = [bld.buildingTypeName for bld in map(universe.getBuilding, planet.buildingIDs)]
+            if planet and culture_archives in buildings_here and history_analyser not in buildings_here:
+                possible_locations.add(pid)
+
+        # check existing queued buildings and remove from possible locations
+        # TODO should be handled in ProductionQueueAI
+        queued_locs = {e.locationID for e in empire.productionQueue if
+                       e.buildType == BUILDING and
+                       e.name == history_analyser}
+
+        possible_locations -= queued_locs
+        chosen_locations = []
+        for i in range(min(max_enqueued, len(possible_locations))):
+            chosen_locations.append(possible_locations.pop())
+        return chosen_locations
+
+    def _enqueue_locations(self):
+        return self._suitable_locations() or None
+
+    def _need_another_one(self):
+        return True  # as long as we have suitable locations...
 
 
 class IndustrialCenterManager(EconomyBoostBuildingManager):
