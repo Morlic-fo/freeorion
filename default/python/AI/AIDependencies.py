@@ -682,6 +682,12 @@ SYSTEM_SHIP_FACILITIES = frozenset((
 # <editor-fold desc="Shipdesign/-parts">
 PART_KRILL_SPAWNER = "SP_KRILL_SPAWNER"
 
+SHIP_PART_BUILDING_REQUIREMENTS = {
+    "FU_TRANSPATIAL_DRIVE": "BLD_SHIPYARD_CON_ADV_ENGINE",
+    "AR_NEUTRONIUM_PLATE": "BLD_NEUTRONIUM_FORGE",
+    "AR_ROCK_PLATE": "BLD_SHIPYARD_AST_REF",
+}
+
 # <editor-fold desc="Effect Scripting for Shipdesigns">
 # <editor-fold desc="Tokens">
 # known tokens the AI can handle
