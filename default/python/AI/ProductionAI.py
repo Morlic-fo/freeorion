@@ -6,6 +6,7 @@ import traceback
 import freeOrionAIInterface as fo  # pylint: disable=import-error
 import AIDependencies
 import AIstate
+import BuildingsAI
 from character.character_module import Aggression
 import FleetUtilsAI
 import FreeOrionAI as foAI
@@ -303,15 +304,6 @@ def generate_production_orders():
             print
             queued_building_names = [bldg.name for bldg in capital_queued_buildings]
 
-            if "BLD_AUTO_HISTORY_ANALYSER" in possible_building_types:
-                for pid in find_automatic_historic_analyzer_candidates():
-                    foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, "BLD_AUTO_HISTORY_ANALYSER", pid,
-                                                                         Priority.building_high)
-
-            if (total_pp > 40 or ((current_turn > 40) and (ColonisationAI.empire_status.get('industrialists', 0) >= 20))) and ("BLD_INDUSTRY_CENTER" in possible_building_types) and ("BLD_INDUSTRY_CENTER" not in (capital_buildings+queued_building_names)) and (building_expense < building_ratio*total_pp):
-                foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, "BLD_INDUSTRY_CENTER", homeworld.id,
-                                                                     Priority.building_high)
-
             if ("BLD_SHIPYARD_BASE" in possible_building_types) and ("BLD_SHIPYARD_BASE" not in (capital_buildings + queued_building_names)):
                 foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, "BLD_SHIPYARD_BASE", homeworld.id,
                                                                      Priority.building_high)
@@ -320,15 +312,6 @@ def generate_production_orders():
                 if (building_name in possible_building_types) and (building_name not in (capital_buildings + queued_building_names)) and (building_expense < building_ratio * total_pp):
                     foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, building_name, homeworld.id,
                                                                          Priority.building_high)
-
-            if ("BLD_IMPERIAL_PALACE" in possible_building_types) and ("BLD_IMPERIAL_PALACE" not in (capital_buildings + queued_building_names)):
-                foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, "BLD_IMPERIAL_PALACE", homeworld.id,
-                                                                     Priority.building_high)
-
-            # ok, BLD_NEUTRONIUM_SYNTH is not currently unlockable, but just in case... ;-p
-            if ("BLD_NEUTRONIUM_SYNTH" in possible_building_types) and ("BLD_NEUTRONIUM_SYNTH" not in (capital_buildings + queued_building_names)):
-                foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, "BLD_NEUTRONIUM_SYNTH", homeworld.id,
-                                                                     Priority.building_base)
 
     # TODO: add total_pp checks below, so don't overload queue
     best_pilot_facilities = ColonisationAI.facilities_by_species_grade.get(
@@ -376,6 +359,10 @@ def generate_production_orders():
                     for i in xrange(num_needed):
                         foAI.foAIstate.production_queue_manager.enqueue_item(SHIP, best_design_id, pid, Priority.ship_orbital_defense)
                     break
+
+    for building_name, building_manager in BuildingsAI.building_manager_map.iteritems():
+        if empire.buildingTypeAvailable(building_name):
+            building_manager.make_building_decision()
 
     building_type = fo.getBuildingType("BLD_SHIPYARD_BASE")
     queued_shipyard_locs = [element.locationID for element in production_queue if (element.name == "BLD_SHIPYARD_BASE")]
@@ -570,209 +557,6 @@ def generate_production_orders():
                     if res:
                         new_yard_count += 1
                         queued_building_locs.append(pid)
-
-    building_name = "BLD_GAS_GIANT_GEN"
-    max_gggs = 1
-    if empire.buildingTypeAvailable(building_name) and foAI.foAIstate.character.may_build_building(building_name):
-        queued_building_locs = [element.locationID for element in production_queue if (element.name == building_name)]
-        building_type = fo.getBuildingType(building_name)
-        for pid in list(AIstate.popCtrIDs) + list(AIstate.outpostIDs):  # TODO: check to ensure that a resource center exists in system, or GGG would be wasted
-            if pid not in queued_building_locs and building_type.canBeProduced(empire.empireID, pid):  # TODO: verify that canBeProduced() checks for preexistence of a barring building
-                planet = universe.getPlanet(pid)
-                if planet.systemID in systems_with_species:
-                    gg_list = []
-                    can_use_gg = False
-                    system = universe.getSystem(planet.systemID)
-                    for opid in system.planetIDs:
-                        other_planet = universe.getPlanet(opid)
-                        if other_planet.size == fo.planetSize.gasGiant:
-                            gg_list.append(opid)
-                        if opid != pid and other_planet.owner == empire.empireID and (FocusType.FOCUS_INDUSTRY in list(other_planet.availableFoci) + [other_planet.focus]):
-                            can_use_gg = True
-                    if pid in sorted(gg_list)[:max_gggs] and can_use_gg:
-                        res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, building_name, pid,
-                                                                                   Priority.building_base)
-                        if res:
-                            queued_building_locs.append(pid)
-
-    building_name = "BLD_SOL_ORB_GEN"
-    if empire.buildingTypeAvailable(building_name) and foAI.foAIstate.character.may_build_building(building_name):
-        already_got_one = 99
-        for pid in list(AIstate.popCtrIDs) + list(AIstate.outpostIDs):
-            planet = universe.getPlanet(pid)
-            if planet and building_name in [bld.buildingTypeName for bld in map(universe.getBuilding, planet.buildingIDs)]:
-                system = universe.getSystem(planet.systemID)
-                if system and system.starType < already_got_one:
-                    already_got_one = system.starType
-        best_type = fo.starType.white
-        best_locs = AIstate.empireStars.get(fo.starType.blue, []) + AIstate.empireStars.get(fo.starType.white, [])
-        if not best_locs:
-            best_type = fo.starType.orange
-            best_locs = AIstate.empireStars.get(fo.starType.yellow, []) + AIstate.empireStars.get(fo.starType.orange, [])
-        if (not best_locs) or (already_got_one < 99 and already_got_one <= best_type):
-            pass  # could consider building at a red star if have a lot of PP but somehow no better stars
-        else:
-            use_new_loc = True
-            queued_building_locs = [element.locationID for element in production_queue if (element.name == building_name)]
-            if queued_building_locs:
-                queued_star_types = {}
-                for loc in queued_building_locs:
-                    planet = universe.getPlanet(loc)
-                    if not planet:
-                        continue
-                    system = universe.getSystem(planet.systemID)
-                    queued_star_types.setdefault(system.starType, []).append(loc)
-                if queued_star_types:
-                    best_queued = sorted(queued_star_types.keys())[0]
-                    if best_queued > best_type:  # i.e., best_queued is yellow, best_type available is blue or white
-                        pass  # should probably evaluate cancelling the existing one under construction
-                    else:
-                        use_new_loc = False
-            if use_new_loc:  # (of course, may be only loc, not really new)
-                if not homeworld:
-                    use_sys = best_locs[0]  # as good as any
-                else:
-                    distance_map = {}
-                    for sys_id in best_locs:  # want to build close to capital for defense
-                        if sys_id == INVALID_ID:
-                            continue
-                        try:
-                            distance_map[sys_id] = universe.jumpDistance(homeworld.systemID, sys_id)
-                        except:
-                            pass
-                    use_sys = ([(-1, INVALID_ID)] + sorted([(dist, sys_id) for sys_id, dist in distance_map.items()]))[:2][-1][-1]  # kinda messy, but ensures a value
-                if use_sys != INVALID_ID:
-                    use_loc = AIstate.colonizedSystems[use_sys][0]
-                    foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, building_name, use_loc,
-                                                                         Priority.building_base)
-
-    building_name = "BLD_ART_BLACK_HOLE"
-    if (
-        empire.buildingTypeAvailable(building_name) and
-        foAI.foAIstate.character.may_build_building(building_name) and
-        len(AIstate.empireStars.get(fo.starType.red, [])) > 0
-    ):
-        already_got_one = False
-        for pid in list(AIstate.popCtrIDs) + list(AIstate.outpostIDs):
-            planet = universe.getPlanet(pid)
-            if planet and building_name in [bld.buildingTypeName for bld in map(universe.getBuilding, planet.buildingIDs)]:
-                already_got_one = True  # has been built, needs one turn to activate
-        queued_building_locs = [element.locationID for element in production_queue if (element.name == building_name)]  # TODO: check that queued locs or already built one are at red stars
-        if not bh_pilots and len(queued_building_locs) == 0 and (red_pilots or not already_got_one):
-            use_loc = None
-            nominal_home = homeworld or universe.getPlanet(
-                (red_pilots + AIstate.colonizedSystems[AIstate.empireStars[fo.starType.red][0]])[0])
-            distance_map = {}
-            for sys_id in AIstate.empireStars.get(fo.starType.red, []):
-                if sys_id == INVALID_ID:
-                    continue
-                try:
-                    distance_map[sys_id] = universe.jumpDistance(nominal_home.systemID, sys_id)
-                except:
-                    pass
-            red_sys_list = sorted([(dist, sys_id) for sys_id, dist in distance_map.items()])
-            for dist, sys_id in red_sys_list:
-                for loc in AIstate.colonizedSystems[sys_id]:
-                    planet = universe.getPlanet(loc)
-                    if planet and planet.speciesName not in ["", None]:
-                        species = fo.getSpecies(planet.speciesName)
-                        if species and "PHOTOTROPHIC" in list(species.tags):
-                            break
-                else:
-                    use_loc = list(
-                        set(red_pilots).intersection(AIstate.colonizedSystems[sys_id]) or AIstate.colonizedSystems[sys_id]
-                    )[0]
-                if use_loc is not None:
-                    break
-            if use_loc is not None:
-                foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, building_name, use_loc,
-                                                                     Priority.building_base)
-
-    building_name = "BLD_BLACK_HOLE_POW_GEN"
-    if empire.buildingTypeAvailable(building_name) and  foAI.foAIstate.character.may_build_building(building_name):
-        already_got_one = False
-        for pid in list(AIstate.popCtrIDs) + list(AIstate.outpostIDs):
-            planet = universe.getPlanet(pid)
-            if planet and building_name in [bld.buildingTypeName for bld in map(universe.getBuilding, planet.buildingIDs)]:
-                already_got_one = True
-        queued_building_locs = [element.locationID for element in production_queue if (element.name == building_name)]
-        if (len(AIstate.empireStars.get(fo.starType.blackHole, [])) > 0) and len(queued_building_locs) == 0 and not already_got_one:
-            if not homeworld:
-                use_sys = AIstate.empireStars.get(fo.starType.blackHole, [])[0]
-            else:
-                distance_map = {}
-                for sys_id in AIstate.empireStars.get(fo.starType.blackHole, []):
-                    if sys_id == INVALID_ID:
-                        continue
-                    try:
-                        distance_map[sys_id] = universe.jumpDistance(homeworld.systemID, sys_id)
-                    except:
-                        pass
-                use_sys = ([(-1, INVALID_ID)] + sorted([(dist, sys_id) for sys_id, dist in distance_map.items()]))[:2][-1][-1]  # kinda messy, but ensures a value
-            if use_sys != INVALID_ID:
-                use_loc = AIstate.colonizedSystems[use_sys][0]
-                foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, building_name, use_loc,
-                                                                     Priority.building_high)
-
-    building_name = "BLD_ENCLAVE_VOID"
-    if empire.buildingTypeAvailable(building_name):
-        already_got_one = False
-        for pid in list(AIstate.popCtrIDs) + list(AIstate.outpostIDs):
-            planet = universe.getPlanet(pid)
-            if planet and building_name in [bld.buildingTypeName for bld in map(universe.getBuilding, planet.buildingIDs)]:
-                already_got_one = True
-        queued_locs = [element.locationID for element in production_queue if (element.name == building_name)]
-        if len(queued_locs) == 0 and homeworld and not already_got_one:
-            foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, building_name, capital_id,
-                                                                 Priority.building_high)
-
-    building_name = "BLD_GENOME_BANK"
-    if empire.buildingTypeAvailable(building_name):
-        already_got_one = False
-        for pid in list(AIstate.popCtrIDs) + list(AIstate.outpostIDs):
-            planet = universe.getPlanet(pid)
-            if planet and building_name in [bld.buildingTypeName for bld in map(universe.getBuilding, planet.buildingIDs)]:
-                already_got_one = True
-        queued_locs = [element.locationID for element in production_queue if (element.name == building_name)]
-        if len(queued_locs) == 0 and homeworld and not already_got_one:
-            foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, building_name, capital_id,
-                                                                 Priority.building_low)
-
-    building_name = "BLD_NEUTRONIUM_EXTRACTOR"
-    already_got_extractor = False
-    if (
-        empire.buildingTypeAvailable(building_name) and
-        [element.locationID for element in production_queue if (element.name == building_name)] == [] and
-        AIstate.empireStars.get(fo.starType.neutron, [])
-    ):
-        # building_type = fo.getBuildingType(building_name)
-        for pid in list(AIstate.popCtrIDs) + list(AIstate.outpostIDs):
-            planet = universe.getPlanet(pid)
-            if planet:
-                building_names = [bld.buildingTypeName for bld in map(universe.getBuilding, planet.buildingIDs)]
-                if (
-                    (planet.systemID in AIstate.empireStars.get(fo.starType.neutron, []) and building_name in building_names) or
-                    "BLD_NEUTRONIUM_SYNTH" in building_names
-                ):
-                    already_got_extractor = True
-        if not already_got_extractor:
-            if not homeworld:
-                use_sys = AIstate.empireStars.get(fo.starType.neutron, [])[0]
-            else:
-                distance_map = {}
-                for sys_id in AIstate.empireStars.get(fo.starType.neutron, []):
-                    if sys_id == INVALID_ID:
-                        continue
-                    try:
-                        distance_map[sys_id] = universe.jumpDistance(homeworld.systemID, sys_id)
-                    except Exception as e:
-                        print_error(e, location="ProductionAI.generateProductionOrders")
-                print ([INVALID_ID] + sorted([(dist, sys_id) for sys_id, dist in distance_map.items()]))
-                use_sys = ([(-1, INVALID_ID)] + sorted([(dist, sys_id) for sys_id, dist in distance_map.items()]))[:2][-1][-1]  # kinda messy, but ensures a value
-            if use_sys != INVALID_ID:
-                use_loc = AIstate.colonizedSystems[use_sys][0]
-                foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, building_name, use_loc,
-                                                                     Priority.building_base)
 
     bld_name = "BLD_SHIPYARD_CON_GEOINT"
     build_ship_facilities(bld_name, best_pilot_facilities)
