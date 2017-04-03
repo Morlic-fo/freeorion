@@ -5,7 +5,7 @@ import AIstate
 import ColonisationAI
 import PlanetUtilsAI
 from freeorion_tools import tech_is_complete, print_error
-from ProductionQueueAI import Priority, BUILDING
+from ProductionQueueAI import BUILDING, ProductionPriority as Priority
 from EnumsAI import FocusType
 import sys
 
@@ -676,7 +676,7 @@ def _get_system_closest_to_target(system_ids, target_system_id):
                 print_error(e, location="ProductionAI._get_system_closest_to_target")
     shortest_distance, closest_system = sorted(distances)[0] if distances else (9999, -1)  # -1: invalid system_id
     return closest_system, shortest_distance
-    
+
 
 def _count_empire_foci():
     """Count current foci settings in empire.
