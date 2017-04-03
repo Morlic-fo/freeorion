@@ -62,7 +62,7 @@ class BuildingManager(object):
         print "Deciding if we want to build a %s..." % self.name
         if self._should_be_built():
             for loc in self._enqueue_locations():
-                AIstate.production_queue_manager.enqueue_item(BUILDING, self.name, loc, self.priority)
+                foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, self.name, loc, self.priority)
 
     def _suitable_locations(self):
         """Return a list of suitable locations for the building"""
