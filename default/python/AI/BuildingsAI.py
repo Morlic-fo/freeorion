@@ -1,4 +1,6 @@
-import freeOrionAIInterface as fo  # pylint: disable=import-error
+import sys
+
+import freeOrionAIInterface as fo
 import FreeOrionAI as foAI
 import AIDependencies
 import AIstate
@@ -10,7 +12,6 @@ from character.character_module import Aggression
 from freeorion_tools import tech_is_complete, print_error
 from ProductionQueueAI import BUILDING, ProductionPriority as Priority
 from EnumsAI import FocusType
-import sys
 
 
 WHITESPACE = 4*" "
@@ -131,10 +132,12 @@ class GenericUniqueBuilding(BuildingManager):
     def _need_another_one(self):
         # default: Build only once per empire
         if self.name in bld_cache.existing_buildings:
-            print 2*WHITESPACE + "We already have existing buildings of this type at ", bld_cache.existing_buildings[self.name]
+            print 2*WHITESPACE + "We already have existing buildings of this type at %s" % (
+                bld_cache.existing_buildings[self.name])
             return False
         if self.name in bld_cache.queued_buildings:
-            print 2*WHITESPACE + "We already have enqueued buildings of this type at ", bld_cache.queued_buildings[self.name]
+            print 2*WHITESPACE + "We already have enqueued buildings of this type at %s" % (
+                bld_cache.queued_buildings[self.name])
             return False
         print 2*WHITESPACE + "We do not have a building of this type yet!"
         return True
@@ -150,7 +153,8 @@ class GenomeBankManager(GenericUniqueBuilding):
             return False
         cost_per_turn = float(self.production_cost) / self.production_time
         if cost_per_turn > bld_cache.total_production/50:
-            print "FAILED: Cost per turn (%.1f) is higher than two percent of production output. Do not build!" % cost_per_turn
+            print "FAILED: Cost per turn (%.1f) is higher than two percent of production output. Do not build!" % (
+                cost_per_turn)
             return False
         print "Passed. Empire production output is large enough to fit this in."
         return True
@@ -327,10 +331,12 @@ class EconomyBoostBuildingManager(BuildingManager):
     def _need_another_one(self):
         # default: Build only once per empire
         if self.name in bld_cache.existing_buildings:
-            print 2*WHITESPACE + "We already have existing buildings of this type at ", bld_cache.existing_buildings[self.name]
+            print 2*WHITESPACE + "We already have existing buildings of this type at %s" % (
+                bld_cache.existing_buildings[self.name])
             return False
         if self.name in bld_cache.queued_buildings:
-            print 2*WHITESPACE + "We already have enqueued buildings of this type at ", bld_cache.queued_buildings[self.name]
+            print 2*WHITESPACE + "We already have enqueued buildings of this type at %s" % (
+                bld_cache.queued_buildings[self.name])
             return False
         print 2*WHITESPACE + "We do not have a building of this type yet!"
         return True
@@ -342,19 +348,23 @@ class EconomyBoostBuildingManager(BuildingManager):
         cost_per_turn = float(self.production_cost)/self.production_time
         turns_till_payoff = self._estimated_time_to_payoff()
         print 2*WHITESPACE + "Empire PP: %.1f" % bld_cache.total_production
-        print 2*WHITESPACE + "Production cost: %d over %d turns (%.2f pp/turn)" % (self.production_cost, self.production_time, cost_per_turn)
+        print 2*WHITESPACE + "Production cost: %d over %d turns (%.2f pp/turn)" % (
+            self.production_cost, self.production_time, cost_per_turn)
         print 2*WHITESPACE + "Estimated turns till pay off: %.1f" % turns_till_payoff
         if self.production_cost > 10*bld_cache.total_production:
             print WHITESPACE + "Failed: Production cost is more than 10 times the empire production. Do not build!"
             return False
         if turns_till_payoff < 10 and cost_per_turn < 2*bld_cache.total_production:
-            print WHITESPACE + "Passed: Building pays off in less than 10 turns and cost per turn is less than twice the empire's production."
+            print WHITESPACE + ("Passed: Building pays off in less than 10 turns"
+                                " and cost per turn is less than twice the empire's production.")
             return True
         if turns_till_payoff < 20 and cost_per_turn < bld_cache.total_production:
-            print WHITESPACE + "Passed: Building pays off in less than 20 turns and cost per turn is less than empire's production."
+            print WHITESPACE + ("Passed: Building pays off in less than 20 turns "
+                                "and cost per turn is less than empire's production.")
             return True
         if self._estimated_time_to_payoff() < 50 and cost_per_turn < .1*bld_cache.total_production:
-            print WHITESPACE + "Passed: Building pays off in less than 50 turns and cost per turn is less than ten percent of empire's production."
+            print WHITESPACE + ("Passed: Building pays off in less than 50 turns"
+                                " and cost per turn is less than ten percent of empire's production.")
             return True
         print WHITESPACE + "Failed! Building pays off too late for current empire production output. Do not build!"
         return False
@@ -648,7 +658,9 @@ class SolarOrbitalGeneratorManager(EconomyBoostBuildingManager):
     needs_production_focus = True
     priority = Priority.building_high
     minimum_aggression = fo.aggression.turtle
-    star_type_list = [(fo.starType.white, fo.starType.blue), (fo.starType.yellow, fo.starType.orange), (fo.starType.red,)]
+    star_type_list = [(fo.starType.white, fo.starType.blue),
+                      (fo.starType.yellow, fo.starType.orange),
+                      (fo.starType.red,)]
 
     def __init__(self):
         EconomyBoostBuildingManager.__init__(self)
@@ -709,9 +721,9 @@ class SolarOrbitalGeneratorManager(EconomyBoostBuildingManager):
 
     def _production_per_pop(self):
         prod_per_pop = {
-            0: 2,  # white, blue
-            1: 1,  # yellow, orange
-            2: .5, # red
+            0: 2,   # white, blue
+            1: 1,   # yellow, orange
+            2: .5,  # red
         }
         target_prod_per_pop = prod_per_pop.get(self.target_best_star, 0)
         current_prod_per_pop = prod_per_pop.get(self.currently_best_star, 0)

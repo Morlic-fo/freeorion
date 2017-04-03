@@ -288,11 +288,7 @@ class ProductionQueueManager(object):
         return res
 
     def __handle_error_on_requeue(self, item):
-        """Handle the case that freshly enqueued item could not be moved into right position in queue.
-
-        :param item_tuple:
-        :return:
-        """
+        """Handle the case that freshly enqueued item could not be moved into right position in queue."""
         new_priority = ProductionPriority.invalid + self._number_of_invalid_priorities
         new_entry = ProductionQueueElement(new_priority, new_priority, item.item_type, item.item, item.location)
         self._number_of_invalid_priorities += 1
