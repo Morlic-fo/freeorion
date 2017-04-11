@@ -174,7 +174,7 @@ def get_invasion_fleets():
             if not troops_per_ship:
                 print >> sys.stderr, "The best orbital invasion design at %s seems not to have any troop capacity." % loc_planet
                 continue
-            _, col_design, build_choices = ProductionAI.get_best_ship_info(PriorityType.PRODUCTION_ORBITAL_INVASION, loc)
+            _, col_design, build_choices, _ = ProductionAI.get_best_ship_info(PriorityType.PRODUCTION_ORBITAL_INVASION, loc)
             if not col_design:
                 continue
             if loc not in build_choices:
@@ -451,7 +451,7 @@ def evaluate_invasion_planet(planet_id, secure_fleet_missions, verbose=True):
 
     threat_factor = min(1, 0.2*MilitaryAI.get_tot_mil_rating()/(sys_total_threat+0.001))**2  # devalue invasions that would require too much military force
 
-    design_id, _, locs = ProductionAI.get_best_ship_info(PriorityType.PRODUCTION_INVASION)
+    design_id, _, locs, _ = ProductionAI.get_best_ship_info(PriorityType.PRODUCTION_INVASION)
     if not locs or not universe.getPlanet(locs[0]):
         # We are in trouble anyway, so just calculate whatever approximation...
         build_time = 4
