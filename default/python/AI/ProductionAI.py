@@ -117,7 +117,7 @@ def cur_best_military_design_rating():
 
 
 def get_best_ship_info(priority, loc=None):
-    """ Returns 3 item tuple: designID, design, buildLocList."""
+    """ Returns 4 item tuple: designID, design, buildLocList, rating."""
     if loc is None:
         planet_ids = AIstate.popCtrIDs
     elif isinstance(loc, list):
@@ -125,20 +125,20 @@ def get_best_ship_info(priority, loc=None):
     elif isinstance(loc, int) and loc in AIstate.popCtrIDs:
         planet_ids = [loc]
     else:  # problem
-        return None, None, None
+        return None, None, None, None
     if priority in _design_cache:
         best_designs = _design_cache[priority]
         if not best_designs:
-            return None, None, None
+            return None, None, None, None
 
         for design_stats in best_designs:
             top_rating, pid, top_id, cost, stats = design_stats
             if pid in planet_ids:
                 break
         valid_locs = [item[1] for item in best_designs if item[0] == top_rating and item[2] == top_id]
-        return top_id, fo.getShipDesign(top_id), valid_locs
+        return top_id, fo.getShipDesign(top_id), valid_locs, top_rating
     else:
-        return None, None, None  # must be missing a Shipyard or other orbital (or missing tech)
+        return None, None, None, None  # must be missing a Shipyard or other orbital (or missing tech)
 
 
 def get_best_ship_ratings(planet_ids):
@@ -224,7 +224,7 @@ def generate_production_orders():
             claimed_stars.setdefault(t_sys.starType, []).append(sys_id)
 
     if current_turn == 1 and len(AIstate.opponentPlanetIDs) == 0:
-        best_design_id, _, build_choices = get_best_ship_info(PriorityType.PRODUCTION_EXPLORATION)
+        best_design_id, _, build_choices, _ = get_best_ship_info(PriorityType.PRODUCTION_EXPLORATION)
         if best_design_id is not None:
             for _ in range(3):
                 foAI.foAIstate.production_queue_manager.enqueue_item(SHIP, best_design_id, build_choices[0],
@@ -299,7 +299,7 @@ def generate_production_orders():
             if sys_orbital_defenses[sys_id] < target_orbitals:
                 num_needed = target_orbitals - sys_orbital_defenses[sys_id]
                 for pid in pids:
-                    best_design_id, col_design, build_choices = get_best_ship_info(
+                    best_design_id, col_design, build_choices, _ = get_best_ship_info(
                             PriorityType.PRODUCTION_ORBITAL_DEFENSE, pid)
                     if not best_design_id:
                         print "no orbital defenses can be built at ", ppstring(PlanetUtilsAI.planet_name_ids([pid]))
@@ -616,7 +616,7 @@ def generate_production_orders():
         foAI.foAIstate.systemStatus.get(capital_system_id, {}).get('fleetThreat', 0) == 0 and
         foAI.foAIstate.systemStatus.get(capital_system_id, {}).get('neighborThreat', 0) == 0
     ):
-        best_design_id, best_design, build_choices = get_best_ship_info(PriorityType.PRODUCTION_INVASION)
+        best_design_id, best_design, build_choices, _ = get_best_ship_info(PriorityType.PRODUCTION_INVASION)
         if build_choices is not None and len(build_choices) > 0:
             loc = random.choice(build_choices)
             prod_time = best_design.productionTime(empire.empireID, loc)
@@ -656,7 +656,7 @@ def generate_production_orders():
     max_colony_fleets = PriorityAI.allottedColonyTargets
     max_outpost_fleets = max_colony_fleets
 
-    _, _, colony_build_choices = get_best_ship_info(PriorityType.PRODUCTION_COLONISATION)
+    _, _, colony_build_choices, _ = get_best_ship_info(PriorityType.PRODUCTION_COLONISATION)
     military_emergency = PriorityAI.unmetThreat > (2.0 * MilitaryAI.get_tot_mil_rating())
 
     print "Production Queue Priorities:"
@@ -713,8 +713,8 @@ def generate_production_orders():
                 PlanetUtilsAI.sys_name_ids(set(PlanetUtilsAI.get_systems(planet_set)))))
         print "\t owned planets in this group are:"
         print "\t %s" % (ppstring(PlanetUtilsAI.planet_name_ids(planet_set)))
-        best_design_id, best_design, build_choices = get_best_ship_info(PriorityType.PRODUCTION_COLONISATION,
-                                                                        list(planet_set))
+        best_design_id, best_design, build_choices, _ = get_best_ship_info(
+                PriorityType.PRODUCTION_COLONISATION, list(planet_set))
         species_map = {}
         for loc in (build_choices or []):
             this_spec = universe.getPlanet(loc).speciesName
@@ -738,7 +738,7 @@ def generate_production_orders():
                 # score = ColonisationAI.pilotRatings.get(pid, 0)
                 # if bestScore < ColonisationAI.curMidPilotRating:
             else:
-                best_design_id, best_design, build_choices = get_best_ship_info(priority, list(planet_set))
+                best_design_id, best_design, build_choices, _ = get_best_ship_info(priority, list(planet_set))
             if best_design is None:
                 del local_priorities[priority]  # must be missing a shipyard -- TODO build a shipyard if necessary
                 continue
@@ -789,7 +789,7 @@ def generate_production_orders():
             best_design_id, best_design, build_choices = best_ships[this_priority]
             if making_colony_ship:
                 loc = random.choice(colony_build_choices)
-                best_design_id, best_design, build_choices = get_best_ship_info(
+                best_design_id, best_design, build_choices, _ = get_best_ship_info(
                         PriorityType.PRODUCTION_COLONISATION, loc)
             elif this_priority == PriorityType.PRODUCTION_MILITARY:
                 selector = random.random()
