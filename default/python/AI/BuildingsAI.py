@@ -553,6 +553,7 @@ class GasGiantGeneratorManager(EconomyBoostBuildingManager):
         self.final_locs = []
 
     def _suitable_locations(self):
+        """:rtype: list"""
         if self.suitable_locs:
             return self.suitable_locs
         universe = fo.getUniverse()
