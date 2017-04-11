@@ -757,7 +757,7 @@ def get_all_existing_buildings():  # Todo move this function to another module
         if not planet:
             sys.stderr.write('Can not find planet with id %d' % pid)
             continue
-        for bld_name in [bld.buildingTypeName for bld in map(universe.getObject, planet.buildingIDs)]:
+        for bld_name in [bld.buildingTypeName for bld in map(universe.getBuilding, planet.buildingIDs)]:
             existing_buildings.setdefault(bld_name, []).append(pid)
     return existing_buildings
 
