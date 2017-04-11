@@ -271,8 +271,8 @@ class ArtificialBlackHoleManager(BuildingManager):
         bh_popctrs = sorted([(ColonisationAI.pilot_ratings.get(pid, 0), pid) for pid in AIstate.popCtrIDs
                              if PlanetUtilsAI.get_systems([pid])[0] in black_hole_systems],
                             reverse=True)
-        red_pilots = [pid for rating, pid in red_popctrs if rating == ColonisationAI.get_best_pilot_rating()]
-        bh_pilots = [pid for rating, pid in bh_popctrs if rating == ColonisationAI.get_best_pilot_rating()]
+        red_pilots = [pid for rating, pid in red_popctrs if rating == state.best_pilot_rating]
+        bh_pilots = [pid for rating, pid in bh_popctrs if rating == state.best_pilot_rating]
         if not bh_pilots and red_pilots and "SH_SOLAR" in fo.getEmpire().availableShipHulls:  # TODO: Generalize
             candidate_locs = get_candidate(red_pilots)
             if candidate_locs:
