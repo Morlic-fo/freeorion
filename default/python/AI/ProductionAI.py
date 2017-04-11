@@ -309,6 +309,7 @@ def generate_production_orders():
                                                                              pid, Priority.ship_orbital_defense)
                     break
 
+    BuildingsAI.bld_cache.update()
     for building_name, building_manager in BuildingsAI.building_manager_map.iteritems():
         if empire.buildingTypeAvailable(building_name):
             building_manager().make_building_decision()
