@@ -390,6 +390,7 @@ class AsteroidRefinementManager(AsteroidShipyardManager):
     def __init__(self):
         self._reset_lists()
         self.unlocked_hulls.extend([])
+        self.unlocked_parts.extend(["AR_ROCK_PLATE"])
         AsteroidShipyardManager.__init__(self)
         self.system_prereqs.append(AsteroidShipyardManager.name)
 
