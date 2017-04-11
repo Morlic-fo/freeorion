@@ -164,3 +164,10 @@ def get_systems(planet_ids):
     # TODO discuss change return type to set
     universe = fo.getUniverse()
     return [universe.getPlanet(pid).systemID for pid in planet_ids]
+
+
+def get_empire_planets_in_system(system_id):
+    system = fo.getUniverse().getSystem(system_id)
+    if not system:
+        return []
+    return get_owned_planets_by_empire(system.planetIDs)
