@@ -7,6 +7,7 @@ import AIstate
 import ColonisationAI
 import PlanetUtilsAI
 import ProductionAI
+from turn_state import state
 from character.character_module import Aggression
 from freeorion_tools import tech_is_complete, print_error
 from ProductionQueueAI import BUILDING, ProductionPriority as Priority
@@ -30,7 +31,7 @@ class BuildingCache(object):
     def update(self):
         """Update the cache."""
         self.existing_buildings = get_all_existing_buildings()
-        self.queued_buildings = AIstate.production_queue_manager.get_all_queued_buildings()
+        self.queued_buildings = foAI.foAIstate.production_queue_manager.get_all_queued_buildings()
         self.n_production_focus, self.n_research_focus = _count_empire_foci()
         self.total_production = fo.getEmpire().productionPoints
 
@@ -241,7 +242,6 @@ class ArtificialBlackHoleManager(BuildingManager):
     priority = Priority.building_base
 
     def _suitable_locations(self):
-        universe = fo.getUniverse()
         def get_candidate(pids):
             # TODO: Implement scnearios where we allow to kill of Phototrophics ... for the greater good!
             candidates = []
@@ -258,6 +258,8 @@ class ArtificialBlackHoleManager(BuildingManager):
                 else:
                     candidates.append(this_pid)
             return candidates
+
+        universe = fo.getUniverse()
 
         red_star_systems = AIstate.empireStars.get(fo.starType.red, [])
         if not red_star_systems:
