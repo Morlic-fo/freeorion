@@ -15,6 +15,7 @@ from EnumsAI import FocusType
 
 
 WHITESPACE = 4*" "
+ARB_LARGE_NUMBER = 1e4
 
 
 class BuildingCache(object):
@@ -294,7 +295,8 @@ class ArtificialBlackHoleManager(BuildingManager):
     def _need_another_one(self):
         existing_locs = bld_cache.existing_buildings.get(self.name, [])
         if set(existing_locs).intersection(self._suitable_locations()):
-            print 2*WHITESPACE + "Already got one at %s (Takes 1 turn to take effect...)" % bld_cache.existing_buildings.get(self.name)
+            print 2*WHITESPACE + "Already got one at %s (Takes 1 turn to take effect...)" % (
+                bld_cache.existing_buildings.get(self.name))
             return False
 
         queued_locs = bld_cache.queued_buildings.get(self.name, [])
@@ -447,7 +449,6 @@ class AutoHistoryAnalyzerManager(EconomyBoostBuildingManager):
         history_analyser = "BLD_AUTO_HISTORY_ANALYSER"
         culture_archives = "BLD_CULTURE_ARCHIVES"
 
-        ARB_LARGE_NUMBER = 1e4
         conditions = {
             # aggression: (min_pp, min_turn, min_pp_to_queue_another_one)
             fo.aggression.beginner: (100, 100, ARB_LARGE_NUMBER),
