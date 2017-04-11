@@ -95,9 +95,9 @@ class BuildingManager(object):
         :return: True if we want to build this somewhere
         :rtype: bool
         """
-        print WHITESPACE + "Checking aggression level: Need %d, have %d..." % (self.minimum_aggression,
-                                                                               foAI.foAIstate.aggression),
-        if foAI.foAIstate.aggression < self.minimum_aggression:
+        aggression = foAI.foAIstate.character.get_trait(Aggression).key
+        print WHITESPACE + "Checking aggression level: Need %d, have %d..." % (self.minimum_aggression, aggression),
+        if aggression < self.minimum_aggression:
             print "Failed! Do not enqueue building!"
             return False
         print "Passed!"
