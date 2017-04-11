@@ -311,7 +311,7 @@ def generate_production_orders():
 
     for building_name, building_manager in BuildingsAI.building_manager_map.iteritems():
         if empire.buildingTypeAvailable(building_name):
-            building_manager.make_building_decision()
+            building_manager().make_building_decision()
     
     find_best_designs_this_turn()
     ShipDesignAI.Cache.print_hulls_for_planets()
