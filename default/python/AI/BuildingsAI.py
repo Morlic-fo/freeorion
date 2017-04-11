@@ -430,7 +430,8 @@ class EconomyBoostBuildingManager(BuildingManager):
         total_pp = self._total_production()
         total_rp = self._total_research()
         total_economy_points = total_pp + total_rp*self.RP_TO_PP_CONVERSION_FACTOR
-        print 2*WHITESPACE + "Projected boost of economy: %.1f PP, %.1f RP (weighted total of %.1f)" % (total_pp, total_rp, total_economy_points)
+        print 2*WHITESPACE + "Projected boost of economy: %.1f PP, %.1f RP (weighted total of %.1f)" % (
+            total_pp, total_rp, total_economy_points)
         return float(self.production_cost) / max(total_economy_points, 1e-12)
 
 
