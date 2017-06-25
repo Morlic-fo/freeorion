@@ -32,8 +32,9 @@ import ResearchAI
 import ResourcesAI
 import TechsListsAI
 import turn_state
-from aistate_interface import create_new_aistate, load_aistate, get_aistate
+import UniverseStrategyAI
 from AIDependencies import INVALID_ID
+from aistate_interface import create_new_aistate, load_aistate, get_aistate
 from freeorion_tools import handle_debug_chat, AITimer
 from common.handlers import init_handlers
 from common.listeners import listener
@@ -339,6 +340,7 @@ def generateOrders():  # pylint: disable=invalid-name
                    ResearchAI.generate_research_orders,
                    ProductionAI.generate_production_orders,
                    ResourcesAI.generate_resources_orders,
+                   UniverseStrategyAI.dump_universe_graph,
                    ]
 
     for action in action_list:
