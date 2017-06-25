@@ -345,6 +345,7 @@ class Allocator(object):
         return foAI.foAIstate.systemStatus.get(self.sys_id, {}).get('enemy_ship_count', 0.)
 
 
+
 class CapitalDefenseAllocator(Allocator):
 
     _allocation_group = 'capitol'
