@@ -78,7 +78,7 @@ def draw(G, empire_id):
     nx.draw_networkx_edges(G, pos, edgelist=edges, width=1, alpha=0.5, edge_color='b', style='dashed')
     # labels
     pos = {k: (a, b - 15) for k, (a, b) in pos.items()}
-    nx.draw_networkx_labels(G, pos, font_size=10, font_family='Arial', labels={n: unicode(data['name'], 'utf-8') for n, data in G.nodes(data=True)},
+    nx.draw_networkx_labels(G, pos, font_size=10, font_family='DejaVu Sans', labels={n: unicode(data['name'], 'utf-8') for n, data in G.nodes(data=True)},
                             )
     plt.axis('off')
     # plt.savefig("universe.png")  # save as png
