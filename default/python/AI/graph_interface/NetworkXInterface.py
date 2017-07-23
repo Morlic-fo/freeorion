@@ -1,9 +1,9 @@
 from GraphInterface import GraphInterface
+import sys
 
 if True:
     import os
     if os.name == 'nt':
-        import sys
         sys.path.append('C:\\Python27\\Lib')
         sys.path.append('C:\\Python27\\Lib\\site-packages')
 
