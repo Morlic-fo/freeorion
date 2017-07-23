@@ -81,6 +81,8 @@ def draw(G, empire_id):
     nx.draw_networkx_labels(G, pos, font_size=10, font_family='DejaVu Sans', labels={n: unicode(data['name'], 'utf-8') for n, data in G.nodes(data=True)},
                             )
     plt.axis('off')
+    mng = plt.get_current_fig_manager()
+    mng.resize(1200,1000)
     # plt.savefig("universe.png")  # save as png
     plt.show(block=True)
 
