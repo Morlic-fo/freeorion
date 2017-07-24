@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import os
 import sys
 from glob import glob
@@ -6,6 +7,17 @@ import traceback
 
 import networkx as nx
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from matplotlib.legend_handler import HandlerPatch
+
+class HandlerCircle(HandlerPatch):
+    def create_artists(self, legend, orig_handle,
+                       xdescent, ydescent, width, height, fontsize, trans):
+        center = 0.5 * width - 0.5 * xdescent, 0.5 * height - 0.5 * ydescent
+        p = mpatches.Circle(xy=center, radius=0.5*(height - ydescent))
+        self.update_prop(p, orig_handle, legend)
+        p.set_transform(trans)
+        return [p]
 
 def parse_file(file_name):
     print "processing file ", file_name
@@ -42,6 +54,17 @@ def parse_file(file_name):
     g.add_edges_from(edges)
     return g, empire_id
 
+color_map = OrderedDict([('Home', '#00008B'),
+                         ('Own Interior Colony', '#4169E1'),
+                         ('Own Border Colony', '#3ADF00'),
+                         ('Unexplored', '#808080'),
+                         ('Unowned Border System', '#FFFF00'),
+                         ('Expansion System', '#F2F5A9'),
+                         ('Misc', '#000000'),
+                         ('Offensive System', '#DC143C'),
+                         ('Other Enemy System', '#F78181'),
+                         ])
+color_name_lookup = OrderedDict([(v,k) for k,v in color_map.items()])
 
 def draw(G, empire_id):
     edges = [(u, v) for (u, v) in G.edges()]
@@ -50,29 +73,29 @@ def draw(G, empire_id):
 
     def get_color(data_dict):
         if data_dict.get('home_system', False):
-            return '#00008B'
+            return color_map['Home']
         if not data_dict.get('explored', False):
-            return '#808080'
+            return color_map['Unexplored']
         elif not data_dict.get('owners', []):
             if data_dict.get('border_system', False):
-                return '#FFFF00'
+                return color_map['Unowned Border System']
             elif data_dict.get('expansion_system', False):
-                return '#F2F5A9'
+                return color_map['Expansion System']
             else:
-                return '#000000'
+                return color_map['Misc']
         elif empire_id in data_dict.get('owners', []):
             if data_dict.get('border_system', False):
-                return '#3ADF00'
+                return color_map['Own Border Colony']
             else:
-                return '#4169E1'
+                return color_map['Own Interior Colony']
         else:
             if data_dict.get('offensive_system', False):
-                return '#DC143C'
+                return color_map['Offensive System']
             else:
-                return '#F78181'
+                return color_map['Other Enemy System']
 
-    nx.draw_networkx_nodes(G, pos, node_size=100,
-                           node_color=[get_color(data) for n, data in G.nodes(data=True)],
+    node_colors = [get_color(data) for n, data in G.nodes(data=True)]
+    nx.draw_networkx_nodes(G, pos, node_size=100, node_color=node_colors,
                            )
     # edges
     nx.draw_networkx_edges(G, pos, edgelist=edges, width=1, alpha=0.5, edge_color='b', style='dashed')
@@ -81,6 +104,10 @@ def draw(G, empire_id):
     nx.draw_networkx_labels(G, pos, font_size=10, font_family='DejaVu Sans', labels={n: unicode(data['name'], 'utf-8') for n, data in G.nodes(data=True)},
                             )
     plt.axis('off')
+    colors_present = [_c for _c in color_name_lookup if _c in node_colors]
+    legend_symbols = [mpatches.Circle((1,1), 1, facecolor = _c, edgecolor="black") for _c in colors_present]
+    legend_labels = [color_name_lookup[_c] for _c in colors_present]
+    plt.legend(legend_symbols, legend_labels, handler_map={mpatches.Circle: HandlerCircle()})
     mng = plt.get_current_fig_manager()
     mng.resize(1200,1000)
     # plt.savefig("universe.png")  # save as png
