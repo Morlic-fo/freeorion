@@ -124,12 +124,11 @@ def main():
     if os.name == 'nt':
         home = os.path.expanduser("~")
         data_dir = home + "\\AppData\\Roaming\\FreeOrion"
-    elif os.name != 'posix':
-        data_dir = (os.environ.get('HOME', "") + "/.freeorion")
-    else:
+    elif os.name == 'posix':
         data_dir = (os.environ.get('XDG_DATA_HOME', os.environ.get('HOME', "") + "/.local/share") + "/freeorion")
-    
-    print "Starting script"
+    else:
+        data_dir = (os.environ.get('HOME', "") + "/.freeorion")
+
     logfiles = sorted(glob(data_dir + os.sep + "A*.log"))
     log_ai1 = glob(data_dir + os.sep + "AI_1.log")
     if log_ai1 and log_ai1[0] in logfiles:
