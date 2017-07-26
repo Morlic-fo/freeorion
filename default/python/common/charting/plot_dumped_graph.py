@@ -107,7 +107,7 @@ def draw(g, empire_id):
                             labels={n: unicode(data['name'], 'utf-8') for n, data in g.nodes(data=True)})
     plt.axis('off')
     colors_present = [_c for _c in color_name_lookup if _c in node_colors]
-    legend_symbols = [mpatches.Circle((1,1), 1, facecolor=_c, edgecolor="black") for _c in colors_present]
+    legend_symbols = [mpatches.Circle((1, 1), 1, facecolor=_c, edgecolor="black") for _c in colors_present]
     legend_labels = [color_name_lookup[_c] for _c in colors_present]
     plt.legend(legend_symbols, legend_labels, handler_map={mpatches.Circle: HandlerCircle()})
     mng = plt.get_current_fig_manager()
@@ -140,7 +140,7 @@ def main():
             g, empire_id = parse_file(lfile)
             if len(g.nodes()) > 1:
                 draw(g, empire_id)
-        except Exception as e:
+        except:
             print >> sys.stderr, "Couldn't parse file:"
             print >> sys.stderr, traceback.format_exc()
 
