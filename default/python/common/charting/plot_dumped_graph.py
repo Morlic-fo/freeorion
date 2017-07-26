@@ -77,25 +77,29 @@ def draw(g, empire_id):
     def get_color(data_dict):
         if data_dict.get('home_system', False):
             return color_map['Home']
-        if not data_dict.get('explored', False):
-            return color_map['Unexplored']
-        elif not data_dict.get('owners', []):
-            if data_dict.get('border_system', False):
-                return color_map['Unowned Border System']
-            elif data_dict.get('expansion_system', False):
-                return color_map['Expansion System']
-            else:
-                return color_map['Misc']
-        elif empire_id in data_dict.get('owners', []):
-            if data_dict.get('border_system', False):
+
+        if data_dict.get('border_system', False):
+            if empire_id in data_dict.get('owners', []):
                 return color_map['Own Border Colony']
             else:
+                return color_map['Unowned Border System']
+
+        if data_dict.get('offensive_system', False):
+            return color_map['Offensive System']
+
+        if data_dict.get('owners', []):
+            if empire_id in data_dict.get('owners', []):
                 return color_map['Own Interior Colony']
-        else:
-            if data_dict.get('offensive_system', False):
-                return color_map['Offensive System']
             else:
                 return color_map['Other Enemy System']
+
+        if data_dict.get('expansion_system', False):
+            return color_map['Expansion System']
+
+        if not data_dict.get('explored', False):
+            return color_map['Unexplored']
+
+        return color_map['Misc']
 
     node_colors = [get_color(data) for n, data in g.nodes(data=True)]
     nx.draw_networkx_nodes(g, pos, node_size=100, node_color=node_colors)
