@@ -39,6 +39,7 @@ class UniverseGraph(Graph):
         self.reset()  # reset to an empty graph
 
         universe = fo.getUniverse()
+        empire_id = fo.empireID()
         for system_id in universe.systemIDs:
             system = universe.getSystem(system_id)
             if not system:
@@ -61,6 +62,8 @@ class UniverseGraph(Graph):
                 node_dict['explored'] = True
             if system_id == foAI.foAIstate._AIstate__origin_home_system_id:
                 node_dict['home_system'] = True
+            if universe.getVisibilityTurnsMap(system_id, empire_id).get(fo.visibility.partial, -9999) > -1:
+                node_dict['scanned'] = True
 
             self.add_node(system_id, attr_dict=node_dict)
 
