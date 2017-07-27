@@ -59,10 +59,11 @@ def parse_file(file_name):
 color_map = OrderedDict([('Home', '#00008B'),
                          ('Own Interior Colony', '#4169E1'),
                          ('Own Border Colony', '#3ADF00'),
-                         ('Unexplored', '#808080'),
                          ('Unowned Border System', '#FFFF00'),
                          ('Expansion System', '#F2F5A9'),
-                         ('Misc', '#000000'),
+                         ('Misc', '#B0B0B0'),
+                         ('Scanned', '#808080'),
+                         ('Unexplored', '#000000'),
                          ('Offensive System', '#DC143C'),
                          ('Other Enemy System', '#F78181'),
                          ])
@@ -97,7 +98,10 @@ def draw(g, empire_id):
             return color_map['Expansion System']
 
         if not data_dict.get('explored', False):
-            return color_map['Unexplored']
+            if data_dict.get('scanned', False):
+                return color_map['Scanned']
+            else:
+                return color_map['Unexplored']
 
         return color_map['Misc']
 
