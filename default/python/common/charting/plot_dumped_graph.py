@@ -145,7 +145,20 @@ def draw(g, empire_id):
     selection_checkboxes.on_clicked(selection_changed_callback_fcn)
 
     mng = plt.get_current_fig_manager()
-    mng.resize(1200, 1000)
+
+    try:
+        backend = plt.get_backend()
+        print "Detected backend:", backend
+        if backend == 'TkAgg':
+            mng.window.state('zoomed')
+        elif backend == 'wxAgg':
+            mng.frame.Maximize(True)
+        elif backend == 'QT4Agg':
+            mng.window.showMaximized()
+        else:
+            raise Exception('Unsupported Backend')
+    except:
+        mng.resize(1200, 1000)
     # plt.savefig("universe.png")  # save as png
     plt.show(block=True)
 
