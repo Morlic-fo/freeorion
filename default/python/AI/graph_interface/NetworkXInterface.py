@@ -112,5 +112,8 @@ class NxGraphInterface(GraphInterface):
     def update_node_attributes(self, attr_name, attr_dict=None):
         nx.set_node_attributes(self.__graph, attr_name, attr_dict)
 
+    def find_connected_components(self):
+        return connected_components(self.__graph)
+
     def node_attributes(self, node):
         return self.__graph.node[node]
