@@ -67,6 +67,7 @@ color_map = OrderedDict([('Home', '#00008B'),
                          ('Unexplored', '#000000'),
                          ('Offensive System', '#DC143C'),
                          ('Other Enemy System', '#F78181'),
+                         ('Inner System', '#FFFFFF')
                          ])
 color_name_lookup = OrderedDict([(tag, color) for color, tag in color_map.items()])
 
@@ -108,6 +109,9 @@ def draw(g, empire_id):
                 return color_map['Scanned']
             else:
                 return color_map['Unexplored']
+
+        if data_dict.get('inner_system', False):
+            return color_map['Inner System']
 
         return color_map['Misc']
 
