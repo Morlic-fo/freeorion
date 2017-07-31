@@ -77,7 +77,6 @@ def draw(g, empire_id):
 
     edges = [(u, v) for (u, v) in g.edges()]
     pos = {n: (data['pos'][0], -data['pos'][1]) for n, data in g.nodes(data=True)}  # positions for all nodes
-    pos = {k: (a, b - 15) for k, (a, b) in pos.items()}
 
     ax_graph = plt.axes()
 
@@ -127,7 +126,8 @@ def draw(g, empire_id):
         legend_labels = [color_name_lookup[_c] for _c in colors_present]
         plt.legend(legend_symbols, legend_labels, handler_map={mpatches.Circle: HandlerCircle()})
         nx.draw_networkx_edges(g, pos, ax=ax_graph, edgelist=edges, width=1, alpha=0.5, edge_color='b', style='dashed')
-        nx.draw_networkx_labels(g, pos, ax=ax_graph, font_size=10, font_family='DejaVu Sans',
+        pos_labels = {n: (x, y - 15) for n, (x, y) in pos.items()}
+        nx.draw_networkx_labels(g, pos_labels, ax=ax_graph, font_size=10, font_family='DejaVu Sans',
                                 labels={n: unicode(data['name'], 'utf-8') for n, data in g.nodes(data=True)})
         plt.axis('off')
         plt.gcf().canvas.draw()
