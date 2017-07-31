@@ -752,6 +752,7 @@ def get_defense_value(species_name):
 
 def evaluate_planet(planet_id, mission_type, spec_name, detail=None):
     """returns the colonisation value of a planet"""
+    # TODO(Morlic): Add bonus score for a) inner systems b) strategic chokepoints based on graph theory
     empire = fo.getEmpire()
     if detail is None:
         detail = []

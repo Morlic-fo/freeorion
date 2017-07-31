@@ -94,6 +94,7 @@ def avail_mil_needing_repair(mil_fleet_ids, split_ships=False, on_mission=False,
     return fleet_buckets
 
 
+# TODO(Morlic): Rework military allocations from local to regional scale using system classification and clustering
 # TODO Move relevant initialization code from get_military_fleets into this class
 class AllocationHelper(object):
 
@@ -345,7 +346,6 @@ class Allocator(object):
         return foAI.foAIstate.systemStatus.get(self.sys_id, {}).get('enemy_ship_count', 0.)
 
 
-
 class CapitalDefenseAllocator(Allocator):
 
     _allocation_group = 'capitol'
@@ -364,6 +364,7 @@ class CapitalDefenseAllocator(Allocator):
                 CombatRatingsAI.rating_needed(2*threat, self.assigned_rating))
 
     def _calculate_threat(self):
+        # TODO: If an inner system, do not consider potential threat or at least use less weight
         potential_threat = max(self._potential_threat() - self._potential_support(), 0)
         actual_threat = self.safety_factor * (
             2*self.threat_bias +
@@ -396,6 +397,7 @@ class PlanetDefenseAllocator(Allocator):
         return min(super_call, restriction)
 
     def _calculate_threat(self):
+        # TODO: If an inner system, do not consider potential threat or at least use less weight
         nearby_forces = CombatRatingsAI.combine_ratings(
             self._potential_support(), self.assigned_rating)
         return (
@@ -416,6 +418,7 @@ class TargetAllocator(Allocator):
     _potential_threat_factor = 0.5
 
     def _calculate_threat(self):
+        # TODO: If an inner system, do not consider potential threat or at least use less weight
         return (
             self.threat_bias +
             + self.safety_factor * CombatRatingsAI.combine_ratings_list([
@@ -500,6 +503,7 @@ class ExplorationTargetAllocator(LocalThreatAllocator):
     _allocation_group = 'exploreTargets'
 
     def _calculate_threat(self):
+        # TODO: If an inner system, do not consider potential threat or at least use less weight
         return self.safety_factor * self._local_threat() + self._potential_threat()
 
     def _take_any(self):
