@@ -2,10 +2,32 @@
 # Not sure if there is any clean and safe way to find the relevant paths automatically
 # given we use a custom python installation in freeorion.
 # For development purposes, just hardcoding the path for now...
+import copy
+import sys
+from functools import wraps
+
 import freeOrionAIInterface as fo
 import FreeOrionAI as foAI
 from freeorion_tools import print_error
 from graph_interface import Graph
+
+
+# If set to true, this flag will deepcopy the universe graph before
+# function calls decorated with @alters_and_restores_universe_graph
+# and assert that the function leaves the universe graph intact.
+# As deepcopying is generally a very expensive operation, this flag
+# should be set to False after algorithms are verified to work correctly.
+# If new functions are added that require the @alters_and_restores_universe_graph
+# decorator, then this flag should be set to True to verify the correctness
+# of the implementation.
+DEBUG_UNIVERSE_GRAPH_CONSISTENCY = True
+
+
+class BrokenUniverseGraphException(Exception):
+
+    def __init__(self, fnc_name=""):
+        self.message = "Function %s broke the UniverseGraph instance" % fnc_name
+        print_error(self.message)
 
 
 class UniverseGraph(Graph):
@@ -84,12 +106,85 @@ class UniverseGraph(Graph):
         # Dumping a large graph into a single line will exceed the maximum line length.
         # Instead, dump one line at a time. For easier parsing, add a prefix to each line.
         for node in self.get_nodes(get_data=True):
-            print "fo__N__ %s\n" % str(node)  # (n, data_dict) tuple
+            print "fo__N__ %s" % str(node)  # (n, data_dict) tuple
         for edge in self.get_edges(get_data=True):
             print "fo__E__", edge  # (u, v, data_dict) tuple
 
 
 __universe_graph = UniverseGraph()
+
+
+def alters_and_restores_universe_graph(function):
+    """Decorator to mark functions that alter the universe_graph and restore it on exit.
+
+    Multiple functions in this module require to add or remove nodes or edges
+    from the __universe_graph instance. Because deepcopying the entire graph is
+    costly, those functions generally work on the original graph instance and then
+    will restore the original __universe_graph state.
+
+    If the flag __DEBUG_UNIVERSE_GRAPH_CONSISTENCY is set, then this decorator
+    will deepcopy the __universe_graph before the function and then compare this
+    original state of the __universe_graph with the state after the function call.
+
+    If discrepencies are found, those are logged and a BrokenUniverseGraphException
+    is thrown.
+    """
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        if not DEBUG_UNIVERSE_GRAPH_CONSISTENCY:
+            return function(*args, **kwargs)
+
+        original_graph = copy.deepcopy(__universe_graph)
+
+        retval = function(*args, **kwargs)
+
+        original_edges = original_graph.get_edges(get_data=True)
+        original_nodes = original_graph.get_nodes(get_data=True)
+        new_edges = __universe_graph.get_edges(get_data=True)
+        new_nodes = __universe_graph.get_nodes(get_data=True)
+
+        original_nodes = {n: data for (n, data) in original_nodes}
+        original_edges = {tuple(sorted((u, v))): data for (u, v, data) in original_edges}
+        new_nodes = {n: data for (n, data) in new_nodes}
+        new_edges = {tuple(sorted((u, v))): data for (u, v, data) in new_edges}
+
+        broken_graph = False
+        # verify edges
+        if new_edges != original_edges:
+            broken_graph = True
+            old_edge_set = set(original_edges.keys())
+            new_edge_set = set(new_edges.keys())
+            for edge in new_edge_set - old_edge_set:
+                print >> sys.stderr, "Function added edge %s to the graph." % str(edge)
+            for edge in old_edge_set - new_edge_set:
+                print >> sys.stderr, "Function deleted edge %s from the graph." % str(edge)
+            for edge in old_edge_set.intersection(new_edge_set):
+                old_attr = original_edges[edge]
+                new_attr = new_edges.get(edge, {})
+                if old_attr != new_attr:
+                    print >> sys.stderr, "Function altered edge %s attribute dict from %s to %s" % (
+                        str(edge), old_attr, new_attr)
+
+        # verify nodes
+        if new_nodes != original_nodes:
+            broken_graph = True
+            old_node_set = set(original_nodes.keys())
+            new_node_set = set(new_nodes.keys())
+            for node in new_node_set - old_node_set:
+                print >> sys.stderr, "Function added node %s to the graph." % str(node)
+            for node in old_node_set - new_node_set:
+                print >> sys.stderr, "Function deleted node %s from the graph." % str(node)
+            for node in old_node_set.intersection(new_node_set):
+                old_attr = original_nodes[node]
+                new_attr = new_nodes.get(node, {})
+                if old_attr != new_attr:
+                    print >> sys.stderr, "Function altered node %s attribute dict from %s to %s" % (
+                        node, old_attr, new_attr)
+        if broken_graph:
+            raise BrokenUniverseGraphException(fnc_name=function.__name__)
+
+        return retval
+    return wrapper
 
 
 def get_universe_graph():
@@ -112,6 +207,7 @@ def dump_universe_graph():
     g.dump()
 
 
+@alters_and_restores_universe_graph
 def find_defensive_positions_min_cut(weight_owned, weight_enemy):
     SINK = 999998
     SOURCE = 999999
