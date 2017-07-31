@@ -204,6 +204,10 @@ def dump_universe_graph():
     g.update_node_attributes('border_system',    {n: True for n in border_systems})
     g.update_node_attributes('expansion_system', {n: True for n in middle_systems})
     g.update_node_attributes('offensive_system', {n: True for n in offensive_systems})
+
+    inner_systems = find_inner_systems(g)
+    g.update_node_attributes('inner_system',     {n: True for n in inner_systems})
+
     g.dump()
 
 
@@ -243,7 +247,7 @@ def find_defensive_positions_min_cut(weight_owned, weight_enemy):
 
 
 @alters_and_restores_universe_graph
-def find_inner_systems():
+def find_inner_systems(g=None):
     """Find inner systems of the empire.
 
     Inner systems are defined as systems that are separated from all enemy systems
@@ -257,27 +261,36 @@ def find_inner_systems():
     # 2. find and loop over all connected components of the resulting graph
     # 3. If no system in a connected component is either owned by an enemy or is unscanned, this is an inner system set
     # 4. Finally, restore the original universe graph and return the found set of inner systems
-    border_systems = {node: data for node, data in __universe_graph.get_nodes(get_data=True)
+    if g is None:
+        g = __universe_graph
+    border_systems = {node: data for node, data in g.get_nodes(get_data=True)
                       if data.get('border_system', False)}
-    edges_removed = __universe_graph.get_edges(nodes=border_systems.keys(), get_data=True)
+    print border_systems
+    edges_removed = g.get_edges(nodes=border_systems.keys(), get_data=True)
+    for (u, v, data) in edges_removed:
+        g.remove_edge(u, v)
     for n in border_systems.keys():
-        __universe_graph.remove_node(n)  # implicitly removes all edges as well
+        g.remove_node(n)
 
     # we use a try-except-finally block to make sure the original graph is always restored when exiting this function.
     try:
         empire_id = fo.empireID()
         inner_systems = set()
-        connected_components = __universe_graph.find_connected_components()
+        connected_components = g.find_connected_components()
         for subnodelist in connected_components:
             for n in subnodelist:
-                attr_dict = __universe_graph.node_attributes(n)
+                attr_dict = g.node_attributes(n)
                 owners = attr_dict.get('owners', [])
                 if empire_id in owners:
                     # can shortcut here: Owned system was not a border system, i.e. must be inner system
                     # if 1 system of the subgraph is an inner system, then all systems are.
                     inner_systems.update(subnodelist)
                     break
-                if owners or not attr_dict.get('scanned', False):
+                if owners:
+                    # someone else owns a system in this subset. Can't be an inner system.
+                    break
+                if not attr_dict.get('scanned', False):
+                    # we did not scout this system yet. So can't be an inner system
                     break
             else:
                 # no system in this subset was owned by another empire and all systems were scanned
@@ -290,6 +303,6 @@ def find_inner_systems():
     finally:
         # restore the previously added nodes and edges
         for node, data in border_systems.items():
-            __universe_graph.add_node(node, data)
+            g.add_node(node, data)
         for (u, v, data) in edges_removed:
-            __universe_graph.add_edge(u, v, data)
+            g.add_edge(u, v, data)
