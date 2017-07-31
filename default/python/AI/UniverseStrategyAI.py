@@ -1,7 +1,3 @@
-# add python standard library path to allow install included external libraries
-# Not sure if there is any clean and safe way to find the relevant paths automatically
-# given we use a custom python installation in freeorion.
-# For development purposes, just hardcoding the path for now...
 import copy
 import sys
 from functools import wraps

@@ -1,6 +1,11 @@
 from GraphInterface import GraphInterface
 import sys
 
+# on windows, add default python standard library path to allow the import of libraries
+# not supplied with the python version distributed with FreeOrion.
+# Not sure if there is any clean and safe way to find the relevant paths automatically.
+# For development purposes, just hardcoding the path for now.
+# TODO: Remove this if NetworkX is supplied with FreeOrion installer on windows
 if True:
     import os
     if os.name == 'nt':
