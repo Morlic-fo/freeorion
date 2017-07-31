@@ -9,6 +9,7 @@ if True:
 
 import networkx as nx
 from networkx.algorithms.connectivity import minimum_st_node_cut
+from networkx.algorithms.components import connected_components
 
 
 class NxGraphInterface(GraphInterface):
@@ -23,8 +24,8 @@ class NxGraphInterface(GraphInterface):
     def get_nodes(self, get_data=False):
         return self.graph.nodes(data=get_data)
 
-    def get_edges(self, get_data=False):
-        return self.graph.edges(data=get_data)
+    def get_edges(self, nodes=None, get_data=False):
+        return self.graph.edges(nbunch=nodes, data=get_data)
 
     def reset(self):
         self.__graph = nx.Graph()

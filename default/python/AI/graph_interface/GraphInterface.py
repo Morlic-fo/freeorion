@@ -7,7 +7,7 @@ class GraphInterface(object):
     def get_nodes(self, get_data=False):
         raise NotImplementedError
 
-    def get_edges(self, get_data=False):
+    def get_edges(self, nodes=None, get_data=False):
         raise NotImplementedError
 
     def reset(self):
