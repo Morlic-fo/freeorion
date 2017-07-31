@@ -111,3 +111,6 @@ class NxGraphInterface(GraphInterface):
 
     def update_node_attributes(self, attr_name, attr_dict=None):
         nx.set_node_attributes(self.__graph, attr_name, attr_dict)
+
+    def node_attributes(self, node):
+        return self.__graph.node[node]

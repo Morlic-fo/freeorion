@@ -33,3 +33,6 @@ class GraphInterface(object):
 
     def update_node_attributes(self, attr_name, attr_dict=None):
         raise NotImplementedError
+
+    def node_attributes(self, node):
+        raise NotImplementedError
