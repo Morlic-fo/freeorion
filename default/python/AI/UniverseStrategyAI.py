@@ -91,6 +91,9 @@ class _UniverseGraph(Graph):
         return {n for n, data in self.get_nodes(get_data=True)
                 if any(owner != fo.empireID() for owner in data.get('owners', []))}
 
+    def inner_systems(self):
+        return {n for n, data in self.get_nodes(get_data=True) if data.get('inner_system', False)}
+
     def dump(self):
         # Dumping a large graph into a single line will exceed the maximum line length.
         # Instead, dump one line at a time. For easier parsing, add a prefix to each line.
@@ -306,3 +309,7 @@ def update_universe_graph_for_new_turn():
 def dump_universe_graph():
     print "Dumping Universe Graph, EmpireID: %d" % fo.empireID()
     __universe_graph.dump()
+
+
+def get_inner_systems():
+    return __universe_graph.inner_systems()
