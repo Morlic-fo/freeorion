@@ -94,6 +94,9 @@ class _UniverseGraph(Graph):
     def inner_systems(self):
         return {n for n, data in self.get_nodes(get_data=True) if data.get('inner_system', False)}
 
+    def border_systems(self):
+        return {n for n, data in self.get_nodes(get_data=True) if data.get('border_system', False)}
+
     def dump(self):
         # Dumping a large graph into a single line will exceed the maximum line length.
         # Instead, dump one line at a time. For easier parsing, add a prefix to each line.
@@ -313,3 +316,7 @@ def dump_universe_graph():
 
 def get_inner_systems():
     return __universe_graph.inner_systems()
+
+
+def get_border_systems():
+    return __universe_graph.border_systems()
