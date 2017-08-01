@@ -330,7 +330,7 @@ def generateOrders():  # pylint: disable=invalid-name
                    ResearchAI.generate_research_orders,
                    ProductionAI.generate_production_orders,
                    ResourcesAI.generate_resources_orders,
-                   UniverseStrategyAI.dump_universe_graph,
+                   UniverseStrategyAI.update_universe_graph_for_new_turn,
                    ]
 
     for action in action_list:
