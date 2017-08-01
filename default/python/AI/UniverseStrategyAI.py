@@ -16,20 +16,13 @@ from graph_interface import Graph
 # If new functions are added that require the @alters_and_restores_universe_graph
 # decorator, then this flag should be set to True to verify the correctness
 # of the implementation.
-DEBUG_UNIVERSE_GRAPH_CONSISTENCY = True
+__DEBUG_UNIVERSE_GRAPH_CONSISTENCY = True
 
 
-class BrokenUniverseGraphException(Exception):
-
-    def __init__(self, fnc_name=""):
-        self.message = "Function %s broke the UniverseGraph instance" % fnc_name
-        print_error(self.message)
-
-
-class UniverseGraph(Graph):
+class _UniverseGraph(Graph):
 
     def __init__(self):
-        super(UniverseGraph, self).__init__()
+        super(_UniverseGraph, self).__init__()
         self._last_update = -1
 
     @property
@@ -38,7 +31,7 @@ class UniverseGraph(Graph):
             # calculate an updated universe graph for this turn
             self._last_update = fo.currentTurn()
             self.update()
-        return super(UniverseGraph, self).graph
+        return super(_UniverseGraph, self).graph
 
     def update(self):
         self.__create_universe_graph()
@@ -107,10 +100,10 @@ class UniverseGraph(Graph):
             print "fo__E__", edge  # (u, v, data_dict) tuple
 
 
-__universe_graph = UniverseGraph()
+__universe_graph = _UniverseGraph()
 
 
-def alters_and_restores_universe_graph(function):
+def __alters_and_restores_universe_graph(function):
     """Decorator to mark functions that alter the universe_graph and restore it on exit.
 
     Multiple functions in this module require to add or remove nodes or edges
@@ -125,9 +118,16 @@ def alters_and_restores_universe_graph(function):
     If discrepencies are found, those are logged and a BrokenUniverseGraphException
     is thrown.
     """
+
+    class BrokenUniverseGraphException(Exception):
+        """This exception is to be thrown when a function did alter the universe graph when it was not allowed to."""
+        def __init__(self, fnc_name=""):
+            self.message = "Function %s broke the UniverseGraph instance" % fnc_name
+            print_error(self.message)
+
     @wraps(function)
     def wrapper(*args, **kwargs):
-        if not DEBUG_UNIVERSE_GRAPH_CONSISTENCY:
+        if not __DEBUG_UNIVERSE_GRAPH_CONSISTENCY:
             return function(*args, **kwargs)
 
         original_graph = copy.deepcopy(__universe_graph)
@@ -183,32 +183,23 @@ def alters_and_restores_universe_graph(function):
     return wrapper
 
 
-def get_universe_graph():
-    return __universe_graph
+def __classify_systems():
+
+    border_systems = __find_defensive_positions_min_cut(1, 0)
+    __universe_graph.update_node_attributes('border_system', {n: True for n in border_systems})
+
+    expansion_systems = __find_defensive_positions_min_cut(1, .99)
+    __universe_graph.update_node_attributes('expansion_system', {n: True for n in expansion_systems})
+
+    offensive_systems = __find_defensive_positions_min_cut(1, 100)
+    __universe_graph.update_node_attributes('offensive_system', {n: True for n in offensive_systems})
+
+    inner_systems = __find_inner_systems()
+    __universe_graph.update_node_attributes('inner_system', {n: True for n in inner_systems})
 
 
-def dump_universe_graph():
-    print "Dumping Universe Graph, EmpireID: %d" % fo.empireID()
-    import copy
-    __universe_graph.update()
-    g = copy.deepcopy(__universe_graph)  # TODO just temporary
-
-    border_systems = find_defensive_positions_min_cut(1, 0)
-    middle_systems = find_defensive_positions_min_cut(1, .99)
-    offensive_systems = find_defensive_positions_min_cut(1, 100)
-
-    g.update_node_attributes('border_system',    {n: True for n in border_systems})
-    g.update_node_attributes('expansion_system', {n: True for n in middle_systems})
-    g.update_node_attributes('offensive_system', {n: True for n in offensive_systems})
-
-    inner_systems = find_inner_systems(g)
-    g.update_node_attributes('inner_system',     {n: True for n in inner_systems})
-
-    g.dump()
-
-
-@alters_and_restores_universe_graph
-def find_defensive_positions_min_cut(weight_owned, weight_enemy):
+@__alters_and_restores_universe_graph
+def __find_defensive_positions_min_cut(weight_owned, weight_enemy):
     SINK = 999998
     SOURCE = 999999
     edges = [(SINK, node) for node in __universe_graph.enemy_nodes() | __universe_graph.unexplored_nodes()]
@@ -242,8 +233,8 @@ def find_defensive_positions_min_cut(weight_owned, weight_enemy):
             __universe_graph.remove_edge(v, u)
 
 
-@alters_and_restores_universe_graph
-def find_inner_systems(g=None):
+@__alters_and_restores_universe_graph
+def __find_inner_systems():
     """Find inner systems of the empire.
 
     Inner systems are defined as systems that are separated from all enemy systems
@@ -257,25 +248,22 @@ def find_inner_systems(g=None):
     # 2. find and loop over all connected components of the resulting graph
     # 3. If no system in a connected component is either owned by an enemy or is unscanned, this is an inner system set
     # 4. Finally, restore the original universe graph and return the found set of inner systems
-    if g is None:
-        g = __universe_graph
-    border_systems = {node: data for node, data in g.get_nodes(get_data=True)
+    border_systems = {node: data for node, data in __universe_graph.get_nodes(get_data=True)
                       if data.get('border_system', False)}
-    print border_systems
-    edges_removed = g.get_edges(nodes=border_systems.keys(), get_data=True)
+    edges_removed = __universe_graph.get_edges(nodes=border_systems.keys(), get_data=True)
     for (u, v, data) in edges_removed:
-        g.remove_edge(u, v)
+        __universe_graph.remove_edge(u, v)
     for n in border_systems.keys():
-        g.remove_node(n)
+        __universe_graph.remove_node(n)
 
     # we use a try-except-finally block to make sure the original graph is always restored when exiting this function.
     try:
         empire_id = fo.empireID()
         inner_systems = set()
-        connected_components = g.find_connected_components()
+        connected_components = __universe_graph.find_connected_components()
         for subnodelist in connected_components:
             for n in subnodelist:
-                attr_dict = g.node_attributes(n)
+                attr_dict = __universe_graph.node_attributes(n)
                 owners = attr_dict.get('owners', [])
                 if empire_id in owners:
                     # can shortcut here: Owned system was not a border system, i.e. must be inner system
@@ -299,6 +287,22 @@ def find_inner_systems(g=None):
     finally:
         # restore the previously added nodes and edges
         for node, data in border_systems.items():
-            g.add_node(node, data)
+            __universe_graph.add_node(node, data)
         for (u, v, data) in edges_removed:
-            g.add_edge(u, v, data)
+            __universe_graph.add_edge(u, v, data)
+
+
+def update_universe_graph_for_new_turn():
+    # update universe graph to reflect new universe state
+    __universe_graph.update()
+
+    # find strategic locations, clusters etc.
+    __classify_systems()
+
+    # dump current universe graph for debugging
+    dump_universe_graph()
+
+
+def dump_universe_graph():
+    print "Dumping Universe Graph, EmpireID: %d" % fo.empireID()
+    __universe_graph.dump()
