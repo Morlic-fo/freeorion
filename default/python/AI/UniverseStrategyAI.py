@@ -208,34 +208,34 @@ def __classify_systems():
 
 @__alters_and_restores_universe_graph
 def __find_defensive_positions_min_cut(weight_owned, weight_enemy):
-    SINK = 999998
-    SOURCE = 999999
-    edges = [(SINK, node) for node in __universe_graph.enemy_nodes() | __universe_graph.unexplored_nodes()]
-    edges.extend([(SOURCE, node) for node in __universe_graph.owned_nodes()])
+    s = 999999
+    t = 999998
+    edges = [(t, node) for node in __universe_graph.enemy_nodes() | __universe_graph.unexplored_nodes()]
+    edges.extend([(s, node) for node in __universe_graph.owned_nodes()])
 
     # to avoid working on an expensive (deep)copy of the universe graph, we add edges
     # and nodes to the existing universe graph and remove them when exiting this function.
-    __universe_graph.add_node(SINK)
-    __universe_graph.add_node(SOURCE)
+    __universe_graph.add_node(t)
+    __universe_graph.add_node(s)
     for (u, v) in edges:
         __universe_graph.add_edge(u, v)
         __universe_graph.add_edge(v, u)
 
     def weight_fnc(n):
-        distance_to_owned = len(__universe_graph.shortest_path(n, SOURCE)) - 1
-        distance_to_enemy = len(__universe_graph.shortest_path(n, SINK)) - 1
+        distance_to_owned = len(__universe_graph.shortest_path(n, s)) - 1
+        distance_to_enemy = len(__universe_graph.shortest_path(n, t)) - 1
         return (weight_owned*distance_to_owned - weight_enemy*distance_to_enemy)**2
 
     try:
         # note that the finally-block is executed even if we exit the function using a return statement
-        return __universe_graph.minimum_st_node_cut(SOURCE, SINK, weight_fnc)
+        return __universe_graph.minimum_st_node_cut(s, t, weight_fnc)
     except Exception as e:
         error(e)
         return set()
     finally:
         # remove the previously added nodes and edges
-        __universe_graph.remove_node(SINK)
-        __universe_graph.remove_node(SOURCE)
+        __universe_graph.remove_node(t)
+        __universe_graph.remove_node(s)
         for (u, v) in edges:
             __universe_graph.remove_edge(u, v)
             __universe_graph.remove_edge(v, u)
