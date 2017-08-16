@@ -4,8 +4,10 @@ from functools import wraps
 
 import freeOrionAIInterface as fo
 import FreeOrionAI as foAI
-from freeorion_tools import print_error
 from graph_interface import Graph
+
+from common.configure_logging import convenience_function_references_for_logger
+(debug, info, warn, error, fatal) = convenience_function_references_for_logger(__name__)
 
 
 # If set to true, this flag will deepcopy the universe graph before
@@ -129,7 +131,7 @@ def __alters_and_restores_universe_graph(function):
         """This exception is to be thrown when a function did alter the universe graph when it was not allowed to."""
         def __init__(self, fnc_name=""):
             self.message = "Function %s broke the UniverseGraph instance" % fnc_name
-            print_error(self.message)
+            error(self.message)
 
     @wraps(function)
     def wrapper(*args, **kwargs):
@@ -228,7 +230,7 @@ def __find_defensive_positions_min_cut(weight_owned, weight_enemy):
         # note that the finally-block is executed even if we exit the function using a return statement
         return __universe_graph.minimum_st_node_cut(SOURCE, SINK, weight_fnc)
     except Exception as e:
-        print_error(e)
+        error(e)
         return set()
     finally:
         # remove the previously added nodes and edges
@@ -288,7 +290,7 @@ def __find_inner_systems():
                 inner_systems.update(subnodelist)
         return inner_systems
     except Exception as e:
-        print_error(e)
+        error(e)
         return set()
     finally:
         # restore the previously added nodes and edges
