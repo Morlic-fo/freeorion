@@ -2,11 +2,12 @@ import freeOrionAIInterface as fo  # pylint: disable=import-error
 import AIstate
 import PlanetUtilsAI
 from EnumsAI import EmpireProductionTypes
-from freeorion_tools import print_error
 from collections import namedtuple
 from sys import stderr
 import bisect  # for implementing the ordered list.
 
+from common.configure_logging import convenience_function_references_for_logger
+(debug, info, warn, error, fatal) = convenience_function_references_for_logger(__name__)
 
 BUILDING = EmpireProductionTypes.BT_BUILDING
 SHIP = EmpireProductionTypes.BT_SHIP
@@ -97,7 +98,7 @@ class ProductionQueueManager(object):
                 print self._production_queue
                 print idx
                 print self._production_queue[idx]
-                print_error(e)
+                error(e)
                 raise e
             ingame_production_queue = fo.getEmpire().productionQueue  # make sure list represents latest changes
             element = ingame_production_queue[idx]
@@ -166,7 +167,7 @@ class ProductionQueueManager(object):
                     print >> stderr, "Queue item %s at planet %d" % (element.name, element.locationID)
                     print >> stderr, "Items we currently consider finished last turn: ", items_finished_last_turn
                     print >> stderr, "Current entries of priority_queue:", self._production_queue
-                    print_error(e)
+                    error(e)
                     break
 
         # After looping through all the items in the ingame production queue,
@@ -217,24 +218,20 @@ class ProductionQueueManager(object):
         elif item_type == SHIP:
             production_order = fo.issueEnqueueShipProductionOrder
         else:
-            print_error("Tried to queue invalid item to production queue.",
-                        location="ProductionQueueManager.enqueue_item(%s, %s, %s, %s)" % (
-                            priority, item_type, item, loc),
-                        trace=False)
+            error("Tried to queue invalid item: ProductionQueueManager.enqueue_item(%s, %s, %s, %s)" % (
+                    priority, item_type, item, loc))
             return False
 
         # issue production order to server
         try:
             res = production_order(item, loc)
         except Exception as e:
-            print_error(e)
+            error(e)
             return False
         if not res:
             if print_enqueue_errors:
-                print_error("Can not queue item to production queue.",
-                            location="ProductionQueueManager.enqueue_item(%s, %s, %s, %s)" % (
-                                priority, item_type, item, loc),
-                            trace=False)
+                error("Can not queue item: ProductionQueueManager.enqueue_item(%s, %s, %s, %s)" % (
+                        priority, item_type, item, loc))
             return False
 
         # Reaching here means we successfully enqueued the item, so let's keep track of it.
@@ -253,10 +250,10 @@ class ProductionQueueManager(object):
             print "Trying to move item to correct position..."
             res = fo.issueRequeueProductionOrder(fo.getEmpire().productionQueue.size - 1, idx)  # move to right position
         except Exception as e:
-            print_error(e)
+            error(e)
             self.__handle_error_on_requeue(self._production_queue.pop(idx))
         if not res:
-            print_error("Can not change position of item in production queue.")
+            error("Can not change position of item in production queue.")
             self.__handle_error_on_requeue(self._production_queue.pop(idx))
         print "After enqueuing ", item, ":"
         try:
@@ -264,7 +261,7 @@ class ProductionQueueManager(object):
         except IndexError as e:
             print "INDEXERROR CAUGHT: self._production_queue:"
             print self._production_queue
-            print_error(e)
+            error(e)
             raise e
         print "real productionQueue: ", [self.get_name_of_production_queue_element(elem)
                                          for elem in fo.getEmpire().productionQueue]
@@ -281,7 +278,7 @@ class ProductionQueueManager(object):
         try:
             res = fo.issueDequeueProductionOrder(index)
         except Exception as e:
-            print_error(e)
+            error(e)
             return False
         if res:
             del self._production_queue[index]

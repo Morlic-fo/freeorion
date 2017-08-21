@@ -9,10 +9,12 @@ import PlanetUtilsAI
 import ProductionAI
 from turn_state import state
 from character.character_module import Aggression
-from freeorion_tools import tech_is_complete, print_error
+from freeorion_tools import tech_is_complete
 from ProductionQueueAI import BUILDING, ProductionPriority as Priority
 from EnumsAI import FocusType
 
+from common.configure_logging import convenience_function_references_for_logger
+(debug, info, warn, error, fatal) = convenience_function_references_for_logger(__name__)
 
 WHITESPACE = 4*" "
 ARB_LARGE_NUMBER = 1e4
@@ -772,7 +774,7 @@ def _get_system_closest_to_target(system_ids, target_system_id):
                 distance = universe.jumpDistance(target_system_id, sys_id)
                 distances.append((distance, sys_id))
             except Exception as e:
-                print_error(e, location="ProductionAI._get_system_closest_to_target")
+                error(e)
     shortest_distance, closest_system = sorted(distances)[0] if distances else (9999, -1)  # -1: invalid system_id
     return closest_system, shortest_distance
 
