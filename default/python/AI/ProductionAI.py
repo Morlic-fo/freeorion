@@ -20,7 +20,7 @@ from turn_state import state
 
 from EnumsAI import (PriorityType, EmpireProductionTypes, MissionType, get_priority_production_types,
                      FocusType, ShipRoleType)
-from freeorion_tools import ppstring, chat_human, tech_is_complete, AITimer
+from freeorion_tools import ppstring, AITimer
 from common.print_utils import Table, Sequence, Text
 from AIDependencies import INVALID_ID
 from ProductionQueueAI import SHIP, BUILDING, ProductionPriority as Priority
