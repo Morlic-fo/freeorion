@@ -24,7 +24,7 @@ class ShipyardManager(object):  # TODO: Inherit from base building class...
     shipyard_is_system_wide = False  # any planet within the same system may build ships/parts unlocked by this yard
     inited = False
     ai_priority = PriorityType.PRODUCTION_MILITARY  # TODO: Consider troops
-    ship_designer = ShipDesignAI.MilitaryShipDesigner  # TODO: Consider troops
+    ship_designer = ShipDesignAI.WarShipDesigner  # TODO: Consider troops and carriers
 
     def __init__(self):
         self.building = fo.getBuildingType(self.name)

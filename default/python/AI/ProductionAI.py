@@ -328,9 +328,8 @@ def generate_production_orders():
 
     enqueued_yard = any(name in BuildingsAI.bld_cache.queued_buildings for name in ShipyardAI.shipyard_map)
     if not enqueued_yard:
-        print "ENTERING SHIP BUILDING CYCLE"
         ShipyardAI.ShipyardManager.ai_priority = PriorityType.PRODUCTION_MILITARY
-        ShipyardAI.ShipyardManager.ship_designer = ShipDesignAI.MilitaryShipDesigner
+        ShipyardAI.ShipyardManager.ship_designer = ShipDesignAI.WarShipDesigner
         best_candidate = None
         for shipyard, manager in ShipyardAI.shipyard_map.iteritems():
             this_manager = manager()
