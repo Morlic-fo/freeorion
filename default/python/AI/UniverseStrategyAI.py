@@ -131,7 +131,7 @@ def __alters_and_restores_universe_graph(function):
         """This exception is to be thrown when a function did alter the universe graph when it was not allowed to."""
         def __init__(self, fnc_name=""):
             self.message = "Function %s broke the UniverseGraph instance" % fnc_name
-            error(self.message)
+            error(self.message, exc_info=1)
 
     @wraps(function)
     def wrapper(*args, **kwargs):
@@ -230,7 +230,7 @@ def __find_defensive_positions_min_cut(weight_owned, weight_enemy):
         # note that the finally-block is executed even if we exit the function using a return statement
         return __universe_graph.minimum_st_node_cut(s, t, weight_fnc)
     except Exception as e:
-        error(e)
+        error(e, exc_info=1)
         return set()
     finally:
         # remove the previously added nodes and edges
@@ -290,7 +290,7 @@ def __find_inner_systems():
                 inner_systems.update(subnodelist)
         return inner_systems
     except Exception as e:
-        error(e)
+        error(e, exc_info=1)
         return set()
     finally:
         # restore the previously added nodes and edges
