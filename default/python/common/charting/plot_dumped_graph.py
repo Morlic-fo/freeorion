@@ -28,11 +28,15 @@ def parse_file(file_name):
     nodes = []
     edges = []
     empire_id = -2
+    empire_name = ''
     with open(unicode(file_name, 'utf-8'), 'r') as lf:
         while True:
             line = lf.readline()
             if not line:
                 break
+
+            if not empire_name and "EmpireID:" in line and "Name:" in line:
+                empire_name = line.split("Name:")[1].split("Turn:")[0].strip()
 
             # we are only interested in newest graph
             if "Dumping Universe Graph" in line:
@@ -55,7 +59,7 @@ def parse_file(file_name):
     for edge in edges:
         print edge
     g.add_edges_from(edges)
-    return g, empire_id
+    return g, empire_id, empire_name
 
 color_map = OrderedDict([('Home', '#00008B'),
                          ('Own Colony', '#4169E1'),
@@ -72,7 +76,7 @@ color_map = OrderedDict([('Home', '#00008B'),
 color_name_lookup = OrderedDict([(tag, color) for color, tag in color_map.items()])
 
 
-def draw(g, empire_id):
+def draw(g, empire_id, empire_name):
     plot_selection = {'Border systems': True, 'Expansion systems': False, 'Offensive Systems': False}
 
     edges = [(u, v) for (u, v) in g.edges()]
@@ -130,6 +134,13 @@ def draw(g, empire_id):
         nx.draw_networkx_labels(g, pos_labels, ax=ax_graph, font_size=10, font_family='DejaVu Sans',
                                 labels={n: unicode(data['name'], 'utf-8') for n, data in g.nodes(data=True)})
         plt.axis('off')
+        try:
+            name_parts = empire_name.split('_')
+            ai_num = name_parts[4].split('RIdx')[0]
+            short_name = name_parts[0] + '_' + name_parts[3] + '_' + ai_num
+        except:
+            short_name = "AI Empire ID: %d" % empire_id
+        plt.title(short_name)
         plt.gcf().canvas.draw()
 
     draw_graph()
@@ -187,9 +198,9 @@ def main():
                 print "skipping stale logfile ", path
     for lfile in logfiles:
         try:
-            g, empire_id = parse_file(lfile)
+            g, empire_id, empire_name = parse_file(lfile)
             if len(g.nodes()) > 1:
-                draw(g, empire_id)
+                draw(g, empire_id, empire_name)
         except:
             print >> sys.stderr, "Couldn't parse file:"
             print >> sys.stderr, traceback.format_exc()
