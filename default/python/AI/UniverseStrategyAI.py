@@ -4,7 +4,7 @@ from functools import wraps
 
 import freeOrionAIInterface as fo
 import FreeOrionAI as foAI
-from graph_interface import Graph
+from graph_interface import Graph, NoPathException
 
 from common.configure_logging import convenience_function_references_for_logger
 (debug, info, warn, error, fatal) = convenience_function_references_for_logger(__name__)
@@ -229,6 +229,9 @@ def __find_defensive_positions_min_cut(weight_owned, weight_enemy):
     try:
         # note that the finally-block is executed even if we exit the function using a return statement
         return __universe_graph.minimum_st_node_cut(s, t, weight_fnc)
+    except NoPathException as e:
+        warn("If empire has not been eliminated, this is an error: " + str(e))
+        return set()
     except Exception as e:
         error(e, exc_info=1)
         return set()

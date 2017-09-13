@@ -1,1 +1,1 @@
-from NetworkXInterface import NxGraphInterface as Graph
+from NetworkXInterface import NoPathException, NxGraphInterface as Graph

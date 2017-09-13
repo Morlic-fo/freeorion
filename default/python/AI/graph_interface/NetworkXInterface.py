@@ -16,6 +16,7 @@ import networkx as nx
 from networkx.algorithms.connectivity import minimum_st_node_cut
 from networkx.algorithms.components import connected_components
 
+NoPathException = nx.NetworkXNoPath
 
 class NxGraphInterface(GraphInterface):
     """NetworkX implementation of the GraphInterface"""
