@@ -170,6 +170,9 @@ namespace {
                                                 std::pair<std::string,
                                                           std::string>>& sorted_entries_list)
     {
+        ScopedTimer subdir_timer("GetSortedPediaDirEntires(" + dir_name + ")",
+                                 true, std::chrono::milliseconds(20));
+
         const Encyclopedia& encyclopedia = GetEncyclopedia();
         int client_empire_id = HumanClientApp::GetApp()->EmpireID();
 
@@ -681,7 +684,8 @@ void EncyclopediaDetailPanel::DoLayout() {
     const int BTN_WIDTH = 24;
     const int Y_OFFSET = 22;
 
-    SectionedScopedTimer timer("EncyclopediaDetailPanel::DoLayout", std::chrono::milliseconds(1));
+    SectionedScopedTimer timer("EncyclopediaDetailPanel::DoLayout",
+                               std::chrono::milliseconds(1));
 
     // name
     GG::Pt ul = GG::Pt(GG::X(6), GG::Y(Y_OFFSET));
@@ -972,6 +976,9 @@ namespace {
     std::unordered_map<std::string, std::pair<std::string, std::string>>
         GetSubDirs(const std::string& dir_name, int depth = 0)
     {
+        ScopedTimer subdir_timer("GetSubDirs(" + dir_name + ", " + std::to_string(depth) + ")",
+                                 true, std::chrono::milliseconds(500));
+
         depth++;
         std::unordered_map<std::string, std::pair<std::string, std::string>> retval;
         // safety check to pre-empt potential infinite loop
@@ -980,6 +987,7 @@ namespace {
                          << " category " << dir_name;
             return retval;
         }
+
 
         std::unordered_map<std::string, std::pair<std::string, std::string>> sub_dirs;
         std::multimap<std::string, std::pair<std::string, std::string>> sorted_entries;
