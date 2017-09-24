@@ -6,6 +6,7 @@ import PlanetUtilsAI
 import ProductionAI
 import ShipDesignAI
 from EnumsAI import PriorityType
+from turn_state import state
 
 
 class ShipyardManager(object):  # TODO: Inherit from base building class...
@@ -130,10 +131,9 @@ class ShipyardManager(object):  # TODO: Inherit from base building class...
         return new_rating, diff
 
     def _possible_locations(self):
-        """Return a list of locations where we are able to build the shipyad."""
-        possible_locs = self._get_shipbuilding_planets(AIstate.popCtrIDs)
+        """Return a list of locations where we are able to build the shipyard."""
+        possible_locs = self._get_shipbuilding_planets(state.get_inhabited_planets())
         print "Possible locs: ", possible_locs
-        print "AIstates... ", AIstate.popCtrIDs
         return possible_locs
 
     @staticmethod
@@ -163,7 +163,7 @@ class ShipyardManager(object):  # TODO: Inherit from base building class...
         """Get te candidate furthest away from existing shipyards.
 
         :param candidate_list: A list containing multiple ShipyardLocationCandidate s
-        :type candidate_list: list
+        :type candidate_list: list[ShipyardLocationCandidate]
         :return: Chosen candidate
         :rtype: ShipyardLocationCandidate
         """
@@ -176,9 +176,8 @@ class ShipyardManager(object):  # TODO: Inherit from base building class...
                 max_dist = this_dist
                 chosen_candidate = candidate
         if chosen_candidate:
-            print "Best candidate is planet %d at system %d with a distance of %d" % (chosen_candidate.pid,
-                                                                                  chosen_candidate.sys_id,
-                                                                                  chosen_candidate.get_distance_to_yards())
+            print "Best candidate is planet %d at system %d with a distance of %d" % (
+                chosen_candidate.pid, chosen_candidate.sys_id, chosen_candidate.get_distance_to_yards())
         return chosen_candidate
 
     @staticmethod
@@ -406,7 +405,6 @@ class NeutroniumForgeManager(BasicShipyardManager):
 
 
 class ShipyardLocationCandidate(object):
-    """."""  # TODO Docstring
     INVALID_DISTANCE = 9999
 
     def __init__(self, pid, bld_name, prereqs, system_prereqs, rating, improvement, yard_locs, shipyard_is_system_wide):
@@ -433,7 +431,7 @@ class ShipyardLocationCandidate(object):
 
     def get_missing_prereqs(self):
         """Return a list of missing prerequisites."""
-        return list(self._missing_prereqs)  # todo not sure anymore, why I did it this way
+        return list(self._missing_prereqs)
 
     def _calc_minimum_distance_to_yards(self, yard_locs):
         """Find the distance to the closest yard.
@@ -496,7 +494,7 @@ def get_empire_asteroid_systems():
     """Return set of empire's asteroid systems."""
     universe = fo.getUniverse()
     asteroid_systems = set()
-    for pid in list(AIstate.popCtrIDs) + list(AIstate.outpostIDs):
+    for pid in state.get_all_empire_planets():
         planet = universe.getPlanet(pid)
         if planet and planet.size == fo.planetSize.asteroids:
             asteroid_systems.add(planet.systemID)

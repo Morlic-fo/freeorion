@@ -122,7 +122,7 @@ class BuildingManager(object):
 class GenericUniqueBuilding(BuildingManager):
 
     def _suitable_locations(self):
-        return list(AIstate.outpostIDs + AIstate.popCtrIDs)
+        return state.get_all_empire_planets()
 
     def _enqueue_locations(self):
         capitol_id = PlanetUtilsAI.get_capital()
@@ -172,7 +172,7 @@ class ImperialPalaceManager(GenericUniqueBuilding):
     minimum_aggression = fo.aggression.beginner
 
     def _suitable_locations(self):
-        return list(AIstate.popCtrIDs)
+        return state.get_inhabited_planets()
 
 
 class NeutroniumSynthManager(GenericUniqueBuilding):
@@ -185,7 +185,7 @@ class NeutroniumSynthManager(GenericUniqueBuilding):
     minimum_aggression = fo.aggression.maniacal
 
     def _suitable_locations(self):
-        return list(AIstate.popCtrIDs)
+        return state.get_inhabited_planets()
 
 
 class NeutroniumExtractorManager(GenericUniqueBuilding):
@@ -201,7 +201,7 @@ class NeutroniumExtractorManager(GenericUniqueBuilding):
     priority = Priority.building_low
 
     def _suitable_locations(self):
-        planets_with_neutron = set(AIstate.outpostIDs + AIstate.popCtrIDs).intersection(
+        planets_with_neutron = set(state.get_all_empire_planets()).intersection(
             PlanetUtilsAI.get_planets_in__systems_ids(AIstate.empireStars.get(fo.starType.neutron, [])))
         planets_with_neutron.update(bld_cache.existing_buildings.get("BLD_NEUTRONIUM_SYNTH", []))
         if not planets_with_neutron:
@@ -215,12 +215,12 @@ class NeutroniumExtractorManager(GenericUniqueBuilding):
         else:
             use_sys, _ = _get_system_closest_to_target(self._suitable_locations(), capitol_sys_id)
         if use_sys and use_sys != -1:
-            use_loc = AIstate.colonizedSystems[use_sys][0]
+            use_loc = state.get_empire_planets_by_system(use_sys)[0]
             return [use_loc]
         return []
 
     def _need_another_one(self):
-        planets_with_neutron = set(AIstate.outpostIDs + AIstate.popCtrIDs).intersection(
+        planets_with_neutron = set(state.get_all_empire_planets()).intersection(
             PlanetUtilsAI.get_planets_in__systems_ids(AIstate.empireStars.get(fo.starType.neutron, [])))
         planets_with_neutron.update(bld_cache.existing_buildings.get("BLD_NEUTRONIUM_SYNTH", []))
 
@@ -268,10 +268,10 @@ class ArtificialBlackHoleManager(BuildingManager):
         if not red_star_systems:
             return []
         black_hole_systems = AIstate.empireStars.get(fo.starType.blackHole, [])
-        red_popctrs = sorted([(ColonisationAI.pilot_ratings.get(pid, 0), pid) for pid in AIstate.popCtrIDs
+        red_popctrs = sorted([(ColonisationAI.pilot_ratings.get(pid, 0), pid) for pid in state.get_inhabited_planets()
                               if PlanetUtilsAI.get_systems([pid])[0] in red_star_systems],
                              reverse=True)
-        bh_popctrs = sorted([(ColonisationAI.pilot_ratings.get(pid, 0), pid) for pid in AIstate.popCtrIDs
+        bh_popctrs = sorted([(ColonisationAI.pilot_ratings.get(pid, 0), pid) for pid in state.get_inhabited_planets()
                              if PlanetUtilsAI.get_systems([pid])[0] in black_hole_systems],
                             reverse=True)
         red_pilots = [pid for rating, pid in red_popctrs if rating == state.best_pilot_rating]
@@ -287,7 +287,7 @@ class ArtificialBlackHoleManager(BuildingManager):
             else:
                 use_sys, _ = _get_system_closest_to_target(red_star_systems, capitol_sys_id)
             if use_sys and use_sys != -1:
-                use_loc = AIstate.colonizedSystems[use_sys][0]
+                use_loc = state.get_empire_planets_by_system(use_sys)[0]
                 return [use_loc]
         return []
 
@@ -318,7 +318,7 @@ class EconomyBoostBuildingManager(BuildingManager):
     # overloaded functions
     def _suitable_locations(self):
         # default: any populated planet
-        return list(AIstate.popCtrIDs)
+        return list(state.get_inhabited_planets())
 
     def _enqueue_locations(self):
         capital_id = PlanetUtilsAI.get_capital()
@@ -409,7 +409,7 @@ class EconomyBoostBuildingManager(BuildingManager):
             number_of_pop_ctrs = bld_cache.n_research_focus
             relevant_population = ColonisationAI.empire_status['researchers']
         else:
-            number_of_pop_ctrs = len(AIstate.popCtrIDs)
+            number_of_pop_ctrs = state.get_number_of_colonies()
             relevant_population = fo.getEmpire().population()
         return number_of_pop_ctrs*self._flat_research_bonus() + relevant_population*self._research_per_pop()
 
@@ -418,7 +418,7 @@ class EconomyBoostBuildingManager(BuildingManager):
             number_of_pop_ctrs = bld_cache.n_production_focus
             relevant_population = ColonisationAI.empire_status['industrialists']
         else:
-            number_of_pop_ctrs = len(AIstate.popCtrIDs)
+            number_of_pop_ctrs = state.get_number_of_colonies()
             relevant_population = fo.getEmpire().population()
         return number_of_pop_ctrs*self._flat_production_bonus() + relevant_population*self._production_per_pop()
 
@@ -488,7 +488,7 @@ class AutoHistoryAnalyzerManager(EconomyBoostBuildingManager):
 
         # find possible locations
         possible_locations = set()
-        for pid in list(AIstate.popCtrIDs) + list(AIstate.outpostIDs):
+        for pid in state.get_all_empire_planets():
             planet = universe.getPlanet(pid)
             if not planet or planet.currentMeterValue(fo.meterType.targetPopulation) < 1:
                 continue
@@ -564,7 +564,7 @@ class GasGiantGeneratorManager(EconomyBoostBuildingManager):
         covered_systems = set()
         covered_systems.update(PlanetUtilsAI.get_systems(bld_cache.existing_buildings.get(self.name, [])
                                                          + bld_cache.queued_buildings.get(self.name, [])))
-        for planet_id in (AIstate.popCtrIDs + AIstate.outpostIDs):
+        for planet_id in state.get_all_empire_planets():
             planet = universe.getPlanet(planet_id)
             if not planet:
                 continue
@@ -650,7 +650,7 @@ class BlackHolePowerGeneratorManager(EconomyBoostBuildingManager):
         else:
             use_sys, _ = _get_system_closest_to_target(self._suitable_locations(), capitol_sys_id)
         if use_sys and use_sys != -1:
-            use_loc = AIstate.colonizedSystems[use_sys][0]
+            use_loc = state.get_empire_planets_by_system(use_sys)[0]
             return [use_loc]
         return []
 
@@ -742,7 +742,7 @@ class SolarOrbitalGeneratorManager(EconomyBoostBuildingManager):
         else:
             use_sys, _ = _get_system_closest_to_target(self._suitable_locations(), capitol_sys_id)
         if use_sys and use_sys != -1:
-            use_loc = AIstate.colonizedSystems[use_sys][0]
+            use_loc = state.get_empire_planets_by_system(use_sys)[0]
             return [use_loc]
         return []
 
@@ -755,7 +755,7 @@ def get_all_existing_buildings():  # Todo move this function to another module
     """
     existing_buildings = {}  # keys are building names, entries are planet ids where building stands
     universe = fo.getUniverse()
-    for pid in set(AIstate.popCtrIDs + AIstate.outpostIDs):
+    for pid in state.get_all_empire_planets():
         planet = universe.getPlanet(pid)
         if not planet:
             sys.stderr.write('Can not find planet with id %d' % pid)
@@ -787,7 +787,7 @@ def _count_empire_foci():
     universe = fo.getUniverse()
     n_production = 0
     n_research = 0
-    for planet_id in AIstate.popCtrIDs:
+    for planet_id in state.get_inhabited_planets():
         planet = universe.getPlanet(planet_id)
         if not planet:
             continue

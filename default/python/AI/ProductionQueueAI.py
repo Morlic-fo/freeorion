@@ -1,10 +1,11 @@
-import freeOrionAIInterface as fo  # pylint: disable=import-error
-import AIstate
-import PlanetUtilsAI
-from EnumsAI import EmpireProductionTypes
 from collections import namedtuple
 from sys import stderr
 import bisect  # for implementing the ordered list.
+
+import freeOrionAIInterface as fo  # pylint: disable=import-error
+import PlanetUtilsAI
+from EnumsAI import EmpireProductionTypes
+from turn_state import state
 
 from common.configure_logging import convenience_function_references_for_logger
 (debug, info, warn, error, fatal) = convenience_function_references_for_logger(__name__)
@@ -312,9 +313,7 @@ def get_planet_diff_since_last_turn():
     """
     all_planets = fo.getUniverse().planetIDs
     currently_owned_planets = set(PlanetUtilsAI.get_owned_planets_by_empire(all_planets))
-    old_outposts = AIstate.outpostIDs
-    old_popctrs = AIstate.popCtrIDs
-    old_owned_planets = set(old_outposts + old_popctrs)
+    old_owned_planets = set(state.get_all_empire_planets())
     newly_gained_planets = currently_owned_planets - old_owned_planets
     lost_planets = old_owned_planets - currently_owned_planets
     return lost_planets, newly_gained_planets
