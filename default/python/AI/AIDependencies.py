@@ -169,11 +169,27 @@ POP_PROPORTIONAL_MOD_SPECIALS = {
 
 # <editor-fold desc="Industry related specials">
 HONEYCOMB_IND_MULTIPLIER = 2.5
+
+MINING_SPECIALS = ["MINERALS_SPECIAL", "CRYSTALS_SPECIAL", "ELERIUM_SPECIAL"]
+MINING_MODIFIER = 1.0
+
+TIDAL_LOCK_SPECIAL = "TIDAL_LOCK_SPECIAL"
+TIDAL_LOCK_MODIFIER = 1.0
 # </editor-fold>
 
 # <editor-fold desc="Research related specials">
 COMPUTRONIUM_SPECIAL = "COMPUTRONIUM_SPECIAL"
 COMPUTRONIUM_RES_MULTIPLIER = 1.0
+
+RESEARCH_SPECIALS_FLAT_BONI_NOT_MODIFIED_BY_SPECIES = {
+    "ECCENTRIC_ORBIT_SPECIAL": 3.0,
+}
+
+RESEARCH_SPECIALS_MODIFIED_BY_SPECIES = {
+    "ANCIENT_RUINS_SPECIAL":  5.0,
+    "ANCIENT_RUINS_DEPLETED_SPECIAL": 5.0,
+    "TEMPORAL_ANOMALY_SPECIAL": 25.0
+}
 # </editor-fold>
 
 # <editor-fold desc="Supply related specials">
@@ -238,7 +254,7 @@ supply_range_techs = {
 }
 # </editor-fold>
 
-# <editor-fold desc="Industry bossting techs">
+# <editor-fold desc="Industry boosting techs">
 # Industry modifiers per population - [[EARLY_PRIORITY]]: Affected by species modifiers
 INDUSTRY_EFFECTS_PER_POP_MODIFIED_BY_SPECIES = {
     "PRO_FUSION_GEN": 1.0,
@@ -253,8 +269,45 @@ INDUSTRY_EFFECTS_PER_POP_NOT_MODIFIED_BY_SPECIES = {
     "PRO_SOL_ORB_GEN": 2.0,  # TODO don't assume will build a gen at a blue/white star
     PRO_SINGULAR_GEN: 5.0,
 }
+
+INDUSTRY_TECHS_FLAT = {
+    PROD_AUTO_NAME: 5.0,
+}
 # </editor-fold>
 
+# <editor-fold desc="Research boosting techs">
+# special mention here because it works without focus setting
+LRN_DISTRIB_THOUGHT = "LRN_DISTRIB_THOUGHT"
+DISTRIB_THOUGHT_BONUS = 0.5
+
+RESEARCH_TECHS_PER_POP_MODIFIED_BY_SPECIES = {
+    LRN_ALGO_ELEGANCE: 0.5,
+    LRN_DISTRIB_THOUGHT: DISTRIB_THOUGHT_BONUS,
+    "GRO_ENERGY_META": 2.5,
+    "LRN_ENCLAVE_VOID": 3.75,
+}
+
+RESEARCH_TECHS_PER_POP_NOT_MODIFIED_BY_SPECIES = {
+    "LRN_QUANT_NET": 2.5,
+}
+
+RESEARCH_TECHS_FLAT = {
+    "LRN_ARTIF_MINDS": 10 * RESEARCH_PER_POP,
+}
+
+STELLAR_TOMOGRAPHY_TECH = "LRN_STELLAR_TOMOGRAPHY"
+STELLAR_TOMOGRAPHY_BONUS_BY_STARTYPE = {
+    fo.starType.blackHole: 5.0,
+    fo.starType.neutron: 3.75,
+    fo.starType.blue: 2.5,
+    fo.starType.white: 2.5,
+    fo.starType.yellow: 1.0,
+    fo.starType.orange: 1.0,
+    fo.starType.red: 1.0,
+}
+
+
+# </editor-fold>
 
 # <editor-fold desc="Defense techs">
 # TODO are these 3 necessary? Could rely on ordered DEFENSE_SHIELD_TECHS (Morlic)
@@ -670,6 +723,20 @@ SYSTEM_SHIP_FACILITIES = frozenset((
     "BLD_SHIPYARD_AST_REF",
 ))
 
+# </editor-fold>
+
+# <editor-fold desc="Research">
+LOCAL_BUILDING_RESEARCH_EFFECT_FLAT = {
+    "BLD_AUTO_HISTORY_ANALYSER": 5,
+    "BLD_CULTURE_LIBRARY": 5,
+    "BLD_CULTURE_ARCHIVES": 5,
+}
+
+# </editor-fold>
+
+# <editor-fold desc="Industry">
+BLD_CULTURE_ARCHIVES = "BLD_CULTURE_ARCHIVES"
+CULTURE_ARCHIVES_INDUSTRY_BONUS = 0.5 / INDUSTRY_PER_POP  # later calculation multiplies with INDUSTRY_PER_POP
 # </editor-fold>
 
 # </editor-fold>

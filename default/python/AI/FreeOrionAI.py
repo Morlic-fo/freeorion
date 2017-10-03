@@ -226,7 +226,7 @@ def generateOrders():  # pylint: disable=invalid-name
     """Called once per turn to tell the Python AI to generate and issue orders to control its empire.
     at end of this function, fo.doneTurn() should be called to indicate to the client that orders are finished
     and can be sent to the server for processing."""
-
+    __reload_modules()
     rules = fo.getGameRules()
     print "Defined game rules:"
     for rule in rules.getRulesAsStrings:
@@ -361,3 +361,7 @@ def declare_war_on_all():  # pylint: disable=invalid-name
 
 
 init_handlers(fo.getOptionsDBOptionStr("ai-config"), fo.getAIDir())
+
+
+def __reload_modules():
+    reload(ResourcesAI)

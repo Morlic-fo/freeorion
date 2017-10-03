@@ -18,7 +18,8 @@ import ColonisationAI
 import AIDependencies
 import CombatRatingsAI
 from common.print_utils import Table, Text
-from freeorion_tools import tech_is_complete, AITimer
+from freeorion_tools import tech_is_complete, AITimer, get_ai_tag_grade
+from turn_state import state
 from common.configure_logging import convenience_function_references_for_logger
 (debug, info, warn, error, fatal) = convenience_function_references_for_logger(__name__)
 
@@ -38,6 +39,8 @@ useGrowth = True
 limitAssessments = False
 
 lastFociCheck = [0]
+
+_VERIFY_RESOURCE_CALCULATION = True
 
 
 class PlanetFocusInfo(object):
@@ -117,6 +120,7 @@ class PlanetFocusManager(object):
         for pid, pinfo, planet in planet_infos:
             industry_target = planet.currentMeterValue(fo.meterType.targetIndustry)
             research_target = planet.currentMeterValue(fo.meterType.targetResearch)
+
             if planet.focus == INDUSTRY:
                 pinfo.possible_output[INDUSTRY] = (industry_target, research_target)
                 pinfo.possible_output[GROWTH] = research_target
@@ -143,6 +147,33 @@ class PlanetFocusManager(object):
         # Protection focus will give the same off-focus Industry and Research targets as Growth Focus
         for pid, pinfo, planet in planet_infos:
             pinfo.possible_output[PROTECTION] = pinfo.possible_output[GROWTH]
+
+        if _VERIFY_RESOURCE_CALCULATION:
+            for pid, pinfo, planet in planet_infos:
+                predicted_output = calculate_resource_output(
+                        pid, planet.speciesName, planet.currentMeterValue(fo.meterType.population))
+
+                actual_output_at_industry_focus = pinfo.possible_output[INDUSTRY]
+
+                ind, res = 0, 1
+                on_focus, off_focus = 0, 1
+
+                predicted_output_at_industry_focus = predicted_output[ind][on_focus], predicted_output[res][off_focus]
+                if any(abs(actual_output_at_industry_focus[i] - actual_output_at_industry_focus[i]) > .15
+                       for i in range(2)):
+                    # freshly colonized planets sometimes report wrong values
+                    logger = warn if actual_output_at_industry_focus == (0, 0) else error
+                    logger("At %s: Predicted output at industry output (%s) differs from actual output (%s)" % (
+                        planet, str(predicted_output_at_industry_focus), str(actual_output_at_industry_focus)))
+
+                actual_output_at_research_focus = pinfo.possible_output[RESEARCH]
+                predicted_output_at_research_focus = predicted_output[ind][off_focus], predicted_output[res][on_focus]
+                if any(abs(actual_output_at_research_focus[i] - predicted_output_at_research_focus[i]) > .15
+                       for i in range(2)):
+                    # freshly colonized planets sometimes report wrong values
+                    logger = warn if actual_output_at_research_focus == (0, 0) else error
+                    logger("At %s: Predicted output at research output (%s) differs from actual output (%s)" % (
+                        planet, str(predicted_output_at_research_focus), str(actual_output_at_research_focus)))
 
 
 class Reporter(object):
@@ -586,7 +617,7 @@ def set_planet_industry_and_research_foci(focus_manager, priority_ratio):
                     target_rp += rr
                     focus_manager.bake_future_focus(pid, RESEARCH, False)
                 continue
-            if adj_round == 3:  # take research at planets where can do reasonable balance
+            if adj_round == 3 and not _VERIFY_RESOURCE_CALCULATION:  # take research at planets where can do reasonable balance
                 if has_force or foAI.foAIstate.character.may_dither_focus_to_gain_research() or (target_rp >= priority_ratio * cumulative_pp):
                     continue
                 pop = planet.currentMeterValue(fo.meterType.population)
@@ -709,3 +740,188 @@ def generate_resources_orders():
 
     Reporter.print_resources_priority()
     # print "ResourcesAI Time Requirements:"
+
+
+def calculate_industry_per_population(planet_id, species_name):
+    """Calculate the industry output per population for a species on a given planet.
+
+    :type planet_id: int
+    :type species_name: str
+    :return: industry per population with and without focus
+    :rtype: tuple[int, int]
+    """
+    ind_with_focus = 0
+    ind_without_focus = 0
+
+    def retval():
+        return (ind_with_focus * AIDependencies.INDUSTRY_PER_POP,
+                ind_without_focus * AIDependencies.INDUSTRY_PER_POP)
+
+    universe = fo.getUniverse()
+    planet = universe.getPlanet(planet_id)
+    if not planet:
+        return retval()
+
+    species = fo.getSpecies(species_name)
+    if not species:
+        return retval()
+
+    ind_with_focus = 1  # base val
+
+    # account researched techs that apply before species modifiers
+    def tech_is_applicable(_tech):
+        # TODO for techs that require a building, check if that building is already built
+        if not tech_is_complete(_tech):
+            return False
+        if _tech == AIDependencies.PRO_SINGULAR_GEN:
+            has_blackhole = len(ColonisationAI.get_claimed_stars().get(fo.starType.blackHole, [])) > 0
+            if not has_blackhole:
+                return False
+        return True
+
+    for tech, bonus in AIDependencies.INDUSTRY_EFFECTS_PER_POP_MODIFIED_BY_SPECIES.iteritems():
+        if tech_is_applicable(tech):
+            ind_with_focus += bonus
+
+    # account species modifier
+    ind_with_focus *= AIDependencies.SPECIES_INDUSTRY_MODIFIER.get(get_ai_tag_grade(species.tags, "INDUSTRY"), 1.0)
+
+    # account bonuses that apply after species modifier
+    for tech, bonus in AIDependencies.INDUSTRY_EFFECTS_PER_POP_NOT_MODIFIED_BY_SPECIES.iteritems():
+        if tech_is_applicable(tech):
+            ind_with_focus += bonus
+
+    for special in AIDependencies.MINING_SPECIALS:
+        if special in planet.specials:
+            ind_with_focus += AIDependencies.MINING_MODIFIER
+
+    if AIDependencies.TIDAL_LOCK_SPECIAL in planet.specials:
+        ind_with_focus += AIDependencies.TIDAL_LOCK_MODIFIER
+
+    for bld_id in planet.buildingIDs:
+        building = universe.getBuilding(bld_id)
+        if building and building.buildingTypeName == AIDependencies.BLD_CULTURE_ARCHIVES:
+            ind_with_focus += AIDependencies.CULTURE_ARCHIVES_INDUSTRY_BONUS
+            ind_without_focus += AIDependencies.CULTURE_ARCHIVES_INDUSTRY_BONUS
+
+    return retval()
+
+
+def calculate_research_per_population(planet_id, species_name):
+    res_with_focus = res_without_focus = 0
+
+    def retval():
+        return (res_with_focus * AIDependencies.RESEARCH_PER_POP,
+                res_without_focus * AIDependencies.RESEARCH_PER_POP)
+
+    universe = fo.getUniverse()
+    planet = universe.getPlanet(planet_id)
+    if not planet:
+        return retval()
+
+    species = fo.getSpecies(species_name)
+    if not species:
+        return retval()
+
+    res_with_focus = 1  # base val
+    # apply modifiers before species modifiers
+    for special, bonus in AIDependencies.RESEARCH_SPECIALS_MODIFIED_BY_SPECIES.iteritems():
+        if special in planet.specials:
+            res_with_focus += bonus
+
+    for tech, bonus in AIDependencies.RESEARCH_TECHS_PER_POP_MODIFIED_BY_SPECIES.iteritems():
+        if tech_is_complete(tech):
+            res_with_focus += bonus
+
+    if tech_is_complete(AIDependencies.LRN_DISTRIB_THOUGHT):
+        res_without_focus += AIDependencies.DISTRIB_THOUGHT_BONUS
+
+    res_with_focus *= AIDependencies.SPECIES_RESEARCH_MODIFIER.get(get_ai_tag_grade(species.tags, "RESEARCH"), 1.0)
+
+    # apply modifiers after species modifiers
+    for tech, bonus in AIDependencies.RESEARCH_TECHS_PER_POP_NOT_MODIFIED_BY_SPECIES.iteritems():
+        if tech_is_complete(tech):
+            res_with_focus += bonus
+
+    if AIDependencies.COMPUTRONIUM_SPECIAL in planet.specials or state.have_computronium:
+        res_with_focus += AIDependencies.COMPUTRONIUM_RES_MULTIPLIER
+
+    if tech_is_complete(AIDependencies.STELLAR_TOMOGRAPHY_TECH):
+        system = universe.getSystem(planet.systemID)
+        if system:
+            res_with_focus += AIDependencies.STELLAR_TOMOGRAPHY_BONUS_BY_STARTYPE.get(system.starType, 0)
+
+    return retval()
+
+
+def calculate_flat_industry_output(planet_id, species_name):
+    ind_with_focus = 0
+    ind_without_focus = 0
+
+    def retval():
+        return ind_with_focus, ind_without_focus
+
+    universe = fo.getUniverse()
+    planet = universe.getPlanet(planet_id)
+    if not planet:
+        return retval()
+
+    species = fo.getSpecies(species_name)
+    if not species:
+        return retval()
+
+    for tech, bonus in AIDependencies.INDUSTRY_TECHS_FLAT.iteritems():
+        if tech_is_complete(tech):
+            ind_with_focus += bonus
+            ind_without_focus += bonus
+
+    return retval()
+
+
+def calculate_flat_research_output(planet_id, species_name):
+    res_with_focus = 0
+    res_without_focus = 0
+
+    def retval():
+        return res_with_focus, res_without_focus
+
+    universe = fo.getUniverse()
+    planet = universe.getPlanet(planet_id)
+    if not planet:
+        return retval()
+
+    species = fo.getSpecies(species_name)
+    if not species:
+        return retval()
+
+    for special, bonus in AIDependencies.RESEARCH_SPECIALS_FLAT_BONI_NOT_MODIFIED_BY_SPECIES.iteritems():
+        if special in planet.specials:
+            res_with_focus += bonus
+
+    for tech, bonus in AIDependencies.RESEARCH_TECHS_FLAT.iteritems():
+        if tech_is_complete(tech):
+            res_with_focus += bonus
+            res_without_focus += bonus
+
+    for bld_id in planet.buildingIDs:
+        building = universe.getBuilding(bld_id)
+        if building:
+            bonus = AIDependencies.LOCAL_BUILDING_RESEARCH_EFFECT_FLAT.get(building.buildingTypeName, 0.0)
+            res_with_focus += bonus
+            res_without_focus += bonus
+
+    return retval()
+
+
+def calculate_resource_output(planet_id, species_name, population):
+    reload(AIDependencies)
+    flat_industry = calculate_flat_industry_output(planet_id, species_name)
+    flat_research = calculate_flat_research_output(planet_id, species_name)
+    industry_per_pop = calculate_industry_per_population(planet_id, species_name)
+    research_per_pop = calculate_research_per_population(planet_id, species_name)
+    def calc_total(flat, per_pop):
+        return (flat[0] + per_pop[0] * population,
+                flat[1] + per_pop[1] * population)
+
+    return (calc_total(flat_industry, industry_per_pop),
+            calc_total(flat_research, research_per_pop))
