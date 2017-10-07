@@ -1,6 +1,7 @@
 import copy
 import sys
 from functools import wraps
+from collections import namedtuple
 
 import freeOrionAIInterface as fo
 import FreeOrionAI as foAI
@@ -19,6 +20,9 @@ from common.configure_logging import convenience_function_references_for_logger
 # decorator, then this flag should be set to True to verify the correctness
 # of the implementation.
 __DEBUG_UNIVERSE_GRAPH_CONSISTENCY = True
+
+
+BorderInformation = namedtuple('BorderInformation', ['border_systems', 'threat_sources'])
 
 
 class _UniverseGraph(Graph):
@@ -211,6 +215,59 @@ def __classify_systems():
     inner_systems = __find_inner_systems()
     __universe_graph.update_node_attributes('inner_system', {n: True for n in inner_systems})
 
+    borders = __define_borders()
+    for i, (border_system_set, threat_sources) in enumerate(borders):
+        __universe_graph.update_node_attributes('border_number', {n: i for n in border_system_set})
+        __universe_graph.update_node_attributes('threat_sources', {n: threat_sources for n in border_system_set})
+
+
+@__alters_and_restores_universe_graph
+def __define_borders():
+    """Find the different border zones of the empire.
+
+    A border is defined as the set of border systems that are disconnected
+    from the other border systems if the inner systems are removed.
+    """
+    # First, find all the different subgraphs of the universe with the inner systems removed.
+    # Then group the border systems according to the subgraphs.
+    inner_systems = {node: data for node, data in __universe_graph.get_nodes(get_data=True)
+                     if data.get('inner_system', False)}
+    edges_removed = __universe_graph.get_edges(nodes=inner_systems.keys(), get_data=True)
+    for (u, v, data) in edges_removed:
+        __universe_graph.remove_edge(u, v)
+    for n in inner_systems.keys():
+        __universe_graph.remove_node(n)
+
+    # we use a try-except-finally block to make sure the original graph is always restored when exiting this function.
+    try:
+        border_system_sets = []
+        connected_components = __universe_graph.find_connected_components()
+        print connected_components
+        print "Border Systems: ", __universe_graph.border_systems()
+        for subnodelist in connected_components:
+            print "Subnodelist: ", subnodelist
+            border_systems_in_set = __universe_graph.border_systems().intersection(subnodelist)
+            print "BorderSystem in subnodelist:", border_systems_in_set
+            if not border_systems_in_set:
+                warn('Tried to find border systems in connected subgraph but could not find any.')
+                continue
+            enemy_nodes_in_set = __universe_graph.enemy_nodes().intersection(subnodelist)
+            unexplored_nodes_in_set = __universe_graph.unexplored_nodes().intersection(subnodelist)
+            border_system_sets.append(BorderInformation(border_systems_in_set,
+                                                        enemy_nodes_in_set | unexplored_nodes_in_set))
+        return border_system_sets
+    except Exception as e:
+        error(e, exc_info=1)
+        return [tuple(__universe_graph.border_systems())]
+    finally:
+        # restore the universe graph to its initial state
+        for node, data in inner_systems.items():
+            __universe_graph.add_node(node, data)
+        for (u, v, data) in edges_removed:
+            __universe_graph.add_edge(u, v, data)
+
+
+
 
 @__alters_and_restores_universe_graph
 def __find_defensive_positions_min_cut(weight_owned, weight_enemy):
@@ -339,3 +396,7 @@ def get_outer_chokepoints():
 
 def get_good_attackpoints():
     return __universe_graph.attackpoints()
+
+
+def get_border_sets():
+    return __universe_graph.__border_sets

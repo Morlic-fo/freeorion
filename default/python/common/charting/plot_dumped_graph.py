@@ -46,8 +46,14 @@ def parse_file(file_name):
                 print "Found dumped universe graph"
 
             if "__N__" in line:
-                node_tuple = literal_eval(line.split("__N__")[1].strip())
+                try:
+                    node_tuple = eval(line.split("__N__")[1].strip())
+                except:
+                    print line.split("__N__")[1].strip()
+                    raise
+
                 nodes.append(node_tuple)
+
 
             elif "__E__" in line:
                 edges.append(literal_eval(line.split("__E__")[1].strip()))
@@ -75,10 +81,19 @@ color_map = OrderedDict([('Home', '#00008B'),
                          ])
 color_name_lookup = OrderedDict([(tag, color) for color, tag in color_map.items()])
 
+def _extract_borders(g):
+    all_borders = {data['border_number'] for n, data in g.nodes(data=True) if 'border_number' in data}
+    border_map = {
+        i: (
+            [n for n, data in g.nodes(data=True) if data.get('border_number') == i],
+            next(data.get('threat_sources') for n, data in g.nodes(data=True) if data.get('border_number') == i)
+        ) for i in all_borders
+    }
+    return border_map
 
 def draw(g, empire_id, empire_name):
     plot_selection = {'Border systems': True, 'Expansion systems': False, 'Offensive Systems': False}
-
+    border_map = _extract_borders(g)
     edges = [(u, v) for (u, v) in g.edges()]
     pos = {n: (data['pos'][0], -data['pos'][1]) for n, data in g.nodes(data=True)}  # positions for all nodes
 
@@ -131,8 +146,11 @@ def draw(g, empire_id, empire_name):
         plt.legend(legend_symbols, legend_labels, handler_map={mpatches.Circle: HandlerCircle()})
         nx.draw_networkx_edges(g, pos, ax=ax_graph, edgelist=edges, width=1, alpha=0.5, edge_color='b', style='dashed')
         pos_labels = {n: (x, y - 15) for n, (x, y) in pos.items()}
-        nx.draw_networkx_labels(g, pos_labels, ax=ax_graph, font_size=10, font_family='DejaVu Sans',
-                                labels={n: unicode(data['name'], 'utf-8') for n, data in g.nodes(data=True)})
+        labels = {n: unicode(data['name'], 'utf-8') for n, data in g.nodes(data=True)}
+        for i, (border_systems, threat_sources) in border_map.iteritems():
+            for n in set(border_systems) | set(threat_sources):
+                labels[n] += labels[n] + ' B%d' % i
+        nx.draw_networkx_labels(g, pos_labels, ax=ax_graph, font_size=10, font_family='DejaVu Sans', labels=labels)
         plt.axis('off')
         try:
             name_parts = empire_name.split('_')
