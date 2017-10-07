@@ -13,6 +13,7 @@ import FleetUtilsAI
 import MilitaryAI
 import PlanetUtilsAI
 import ProductionAI
+import UniverseStrategyAI
 from AIDependencies import INVALID_ID
 from EnumsAI import MissionType, PriorityType
 from common.print_utils import Table, Text, Float
@@ -493,6 +494,7 @@ def evaluate_invasion_planet(planet_id, secure_fleet_missions, verbose=True):
     planet_score = retaliation_risk_factor(planet.owner) * threat_factor * max(0, base_score)
     if clear_path:
         planet_score *= 1.5
+    strategic_factor = 1.5 if system_id in UniverseStrategyAI.get_good_attackpoints() else 1.0
     if verbose:
         debug(' - planet score: %.2f\n'
               ' - planned troops: %.2f\n'
@@ -501,8 +503,11 @@ def evaluate_invasion_planet(planet_id, secure_fleet_missions, verbose=True):
               ' - planet detail: %s\n'
               ' - popval: %.1f\n'
               ' - bldval: %s\n'
-              ' - enemyval: %s',
-              planet_score, planned_troops, troop_cost, threat_factor, detail, colony_base_value, bld_tally, enemy_val)
+              ' - enemyval: %s\n',
+              ' - strategic factor: %.1f',
+              planet_score, planned_troops, troop_cost,
+              threat_factor, detail, colony_base_value,
+              bld_tally, enemy_val, strategic_factor)
         debug(' - system secured: %s' % system_secured)
     return [planet_score, planned_troops]
 
@@ -618,3 +623,4 @@ def assign_invasion_fleets_to_invade():
     for fid in FleetUtilsAI.extract_fleet_ids_without_mission_types(all_invasion_fleet_ids):
         this_mission = aistate.get_fleet_mission(fid)
         this_mission.check_mergers(context="Post-send consolidation of unassigned troops")
+

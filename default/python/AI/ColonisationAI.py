@@ -12,6 +12,7 @@ import InvasionAI
 import PlanetUtilsAI
 import PriorityAI
 import ProductionAI
+import UniverseStrategyAI
 import MilitaryAI
 from aistate_interface import get_aistate
 from target import TargetPlanet
@@ -576,7 +577,6 @@ def _base_asteroid_mining_val():
 
 def evaluate_planet(planet_id, mission_type, spec_name, detail=None):
     """returns the colonisation value of a planet"""
-    # TODO(Morlic): Add bonus score for a) inner systems b) strategic chokepoints based on graph theory
     empire = fo.getEmpire()
     if detail is None:
         detail = []
@@ -769,6 +769,18 @@ def evaluate_planet(planet_id, mission_type, spec_name, detail=None):
         fixed_res += discount_multiplier * 6
         detail.append("ECCENTRIC_ORBIT_SPECIAL %.1f" % (discount_multiplier * 6))
 
+    # add some bias to planets depending on their location in the universe
+    # the strategic value defined here is a multiplicative factor to the final score
+    if this_sysid in UniverseStrategyAI.get_border_systems():
+        strategic_value = 1.1
+    elif this_sysid in UniverseStrategyAI.get_inner_systems():
+        strategic_value = 1.05
+    elif this_sysid in UniverseStrategyAI.get_outer_chokepoints():
+        strategic_value = 1.2
+    else:
+        strategic_value = 1.
+    detail.append('Strategic position factor: %.2f' % strategic_value)
+
     if (mission_type == MissionType.OUTPOST or
             (mission_type == MissionType.INVASION and not spec_name)):
 
@@ -892,11 +904,18 @@ def evaluate_planet(planet_id, mission_type, spec_name, detail=None):
             supply_val += 25 * (planet_supply - sys_supply)
         detail.append("sys_supply: %d, planet_supply: %d, supply_val: %.0f" % (sys_supply, planet_supply, supply_val))
         retval += supply_val
+<<<<<<< HEAD
 
         if threat_factor < 1.0:
             threat_factor = revise_threat_factor(threat_factor, retval, this_sysid, MINIMUM_COLONY_SCORE)
             retval *= threat_factor
             detail.append("threat reducing value by %3d %%" % (100 * (1 - threat_factor)))
+=======
+        if thrt_factor < 1.0:
+            retval *= thrt_factor
+            detail.append("threat reducing value by %3d %%" % (100 * (1 - thrt_factor)))
+        retval *= strategic_value
+>>>>>>> Consider strategic position for colonization/invasion value
         return int(retval)
     else:  # colonization mission
         if not species:
@@ -1058,10 +1077,17 @@ def evaluate_planet(planet_id, mission_type, spec_name, detail=None):
         if existing_presence:
             detail.append("preexisting system colony")
             retval = (retval + existing_presence * get_defense_value(spec_name)) * 2
+<<<<<<< HEAD
         if threat_factor < 1.0:
             threat_factor = revise_threat_factor(threat_factor, retval, this_sysid, MINIMUM_COLONY_SCORE)
             retval *= threat_factor
             detail.append("threat reducing value by %3d %%" % (100 * (1 - threat_factor)))
+=======
+        if thrt_factor < 1.0:
+            retval *= thrt_factor
+            detail.append("threat reducing value by %3d %%" % (100 * (1 - thrt_factor)))
+        retval *= strategic_value
+>>>>>>> Consider strategic position for colonization/invasion value
     return retval
 
 
