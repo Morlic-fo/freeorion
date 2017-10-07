@@ -99,6 +99,12 @@ class _UniverseGraph(Graph):
     def border_systems(self):
         return {n for n, data in self.get_nodes(get_data=True) if data.get('border_system', False)}
 
+    def outer_chokepoints(self):
+        return {n for n, data in self.get_nodes(get_data=True) if data.get('expansion_system', False)}
+
+    def attackpoints(self):
+        return {n for n, data in self.get_nodes(get_data=True) if data.get('offensive_system', False)}
+
     def dump(self):
         # Dumping a large graph into a single line will exceed the maximum line length.
         # Instead, dump one line at a time. For easier parsing, add a prefix to each line.
@@ -325,3 +331,11 @@ def get_inner_systems():
 
 def get_border_systems():
     return __universe_graph.border_systems()
+
+
+def get_outer_chokepoints():
+    return __universe_graph.outer_chokepoints()
+
+
+def get_good_attackpoints():
+    return __universe_graph.attackpoints()
