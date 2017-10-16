@@ -8,7 +8,6 @@ import MoveUtilsAI
 import MilitaryAI
 import InvasionAI
 import CombatRatingsAI
-import universe_object
 from universe_object import UniverseObject, System, Fleet, Planet
 from EnumsAI import MissionType
 from AIDependencies import INVALID_ID
@@ -65,7 +64,7 @@ class AIFleetMission(object):
 
     def __setstate__(self, state):
         import fleet_orders
-        assert len(state) == 4
+        assert len(state) == 5
         assert "orders" in state
         assert "fleet" in state
         assert "type" in state
@@ -78,11 +77,11 @@ class AIFleetMission(object):
 
         assert state["type"] is None or isinstance(state["type"], MissionType)
         assert state["target"] is None or isinstance(state["target"], int)
+        target_type = state.pop("target_type")
         if state["target"] is not None:
             assert type(state["target"]) == int
-            assert "target_type" in state
             object_map = {Planet.object_name: Planet, System.object_name: System, Fleet.object_name: Fleet}
-            state["target"] = object_map[state["target_type"]](state["target"])
+            state["target"] = object_map[target_type](state["target"])
 
         state["fleet"] = Fleet(state["fleet"])
         self.__dict__ = state
@@ -93,6 +92,8 @@ class AIFleetMission(object):
         if self.target is not None:
             retval["target_type"] = self.target.object_name
             retval["target"] = self.target.id
+        else:
+            retval["target_type"] = None
         return retval
 
     def set_target(self, mission_type, target):
