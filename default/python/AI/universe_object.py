@@ -9,6 +9,7 @@ class UniverseObject(object):
     Stores information about AI target - its id and type.
     :type id: int
     """
+    object_name = 'universe_object'
 
     def __init__(self, target_id):
         self.id = target_id
