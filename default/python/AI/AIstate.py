@@ -15,6 +15,7 @@ import MilitaryAI
 import PlanetUtilsAI
 import ProductionQueueAI
 from freeorion_tools import get_partial_visibility_turn
+import turn_state
 from universe_object import System
 from AIDependencies import INVALID_ID
 from character.character_module import create_character, Aggression
@@ -161,6 +162,8 @@ class AIstate(object):
         self.__empire_standard_enemy = CombatRatingsAI.default_ship_stats().get_stats(hashable=True)
         self.empire_standard_enemy_rating = 0  # TODO: track on a per-empire basis
         self.character = create_character(aggression, self.empireID)
+
+        self.last_turn_planets = []
         self.production_queue_manager = ProductionQueueAI.ProductionQueueManager()
 
     def __setstate__(self, state):
@@ -994,3 +997,6 @@ class AIstate(object):
 
     def get_standard_enemy(self):
         return CombatRatingsAI.ShipCombatStats(stats=self.__empire_standard_enemy)
+
+    def end_of_turn_update(self):
+        self.last_turn_planets = list(turn_state.state.get_all_empire_planets())

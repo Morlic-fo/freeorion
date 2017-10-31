@@ -336,6 +336,8 @@ def generateOrders():  # pylint: disable=invalid-name
             main_timer.stop()
         except Exception as e:
             error("Exception %s while trying to %s" % (e, action.__name__), exc_info=True)
+
+    foAIstate.end_of_turn_update()
     main_timer.stop_print_and_clear()
     turn_timer.stop_print_and_clear()
     turn_timer.start("Server_Processing")
