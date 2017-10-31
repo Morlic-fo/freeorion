@@ -7,6 +7,7 @@ import AIstate
 import ColonisationAI
 import PlanetUtilsAI
 import ProductionAI
+from AIDependencies import INVALID_ID
 from turn_state import state
 from character.character_module import Aggression
 from freeorion_tools import tech_is_complete
@@ -407,7 +408,7 @@ class EconomyBoostBuildingManager(BuildingManager):
     def _total_research(self):
         if self.needs_research_focus:
             number_of_pop_ctrs = bld_cache.n_research_focus
-            relevant_population = ColonisationAI.empire_status['researchers']
+            relevant_population = state.population_with_research_focus()
         else:
             number_of_pop_ctrs = state.get_number_of_colonies()
             relevant_population = fo.getEmpire().population()
@@ -416,7 +417,7 @@ class EconomyBoostBuildingManager(BuildingManager):
     def _total_production(self):
         if self.needs_production_focus:
             number_of_pop_ctrs = bld_cache.n_production_focus
-            relevant_population = ColonisationAI.empire_status['industrialists']
+            relevant_population = state.population_with_industry_focus()
         else:
             number_of_pop_ctrs = state.get_number_of_colonies()
             relevant_population = fo.getEmpire().population()
@@ -775,7 +776,7 @@ def _get_system_closest_to_target(system_ids, target_system_id):
                 distances.append((distance, sys_id))
             except Exception as e:
                 error(e)
-    shortest_distance, closest_system = sorted(distances)[0] if distances else (9999, -1)  # -1: invalid system_id
+    shortest_distance, closest_system = sorted(distances)[0] if distances else (9999, INVALID_ID)
     return closest_system, shortest_distance
 
 
