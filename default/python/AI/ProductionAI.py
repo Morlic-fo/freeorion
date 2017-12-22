@@ -206,13 +206,10 @@ def generate_production_orders():
     # next loop over resource groups, adding buildings & ships
     _print_production_queue()
     universe = fo.getUniverse()
-    print "Production Queue Management:"
     empire = fo.getEmpire()
     production_queue = empire.productionQueue
     total_pp = empire.productionPoints
     current_turn = fo.currentTurn()
-    print
-    print "  Total Available Production Points: %s" % total_pp
 
     if current_turn == 1 and len(AIstate.opponentPlanetIDs) == 0 and len(production_queue) == 0:
         best_design_id, _, build_choices, _ = get_best_ship_info(PriorityType.PRODUCTION_EXPLORATION)
@@ -222,6 +219,9 @@ def generate_production_orders():
                                                                      Priority.ship_scout * Priority.emergency_factor)
             fo.updateProductionQueue()
 
+    print "Production Queue Management:"
+    print
+    print "  Total Available Production Points: %s" % total_pp
     print "Buildings present on all owned planets:"
     for pid in state.get_all_empire_planets():
         planet = universe.getPlanet(pid)
