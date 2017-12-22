@@ -206,13 +206,6 @@ def generate_production_orders():
     # next loop over resource groups, adding buildings & ships
     _print_production_queue()
     universe = fo.getUniverse()
-    capital_id = PlanetUtilsAI.get_capital()
-    if capital_id is None or capital_id == INVALID_ID:
-        homeworld = None
-        capital_system_id = None
-    else:
-        homeworld = universe.getPlanet(capital_id)
-        capital_system_id = homeworld.systemID
     print "Production Queue Management:"
     empire = fo.getEmpire()
     production_queue = empire.productionQueue
@@ -235,31 +228,6 @@ def generate_production_orders():
         if planet:
             print "%30s: %s" % (planet.name, [universe.getBuilding(bldg).name for bldg in planet.buildingIDs])
     print
-
-    if homeworld:
-        table = Table([
-            Text('Id', description='Building id'),
-            Text('Name'),
-            Text('Type'),
-            Sequence('Tags'),
-            Sequence('Specials'),
-            Text('Owner Id'),
-        ], table_name='Buildings present at empire Capital in Turn %d' % fo.currentTurn())
-
-        for building_id in homeworld.buildingIDs:
-            building = universe.getBuilding(building_id)
-
-            table.add_row((
-                building_id,
-                building.name,
-                "_".join(building.buildingTypeName.split("_")[-2:]),
-                sorted(building.tags),
-                sorted(building.specials),
-                building.owner
-            ))
-
-        table.print_table()
-        print
 
     max_defense_portion = foAI.foAIstate.character.max_defense_portion()
     if foAI.foAIstate.character.check_orbital_production():
@@ -439,7 +407,7 @@ def generate_production_orders():
                     res = fo.issueScrapOrder(bldg)
                     print "Tried scrapping %s at planet %s, got result %d" % (building_name, planet.name, res)
         elif foAI.foAIstate.character.may_build_building(building_name) and can_build_camp and (t_pop >= 36):
-            if (planet.focus == FocusType.FOCUS_GROWTH) or (AIDependencies.COMPUTRONIUM_SPECIAL in planet.specials) or (pid == capital_id):
+            if planet.focus == FocusType.FOCUS_GROWTH or AIDependencies.COMPUTRONIUM_SPECIAL in planet.specials:
                 continue
             queued_building_locs = [element.locationID for element in production_queue if element.name == building_name]
             if c_pop < 0.95 * t_pop:
@@ -597,12 +565,7 @@ def generate_production_orders():
     print ("Trooper Status turn %d: %d total, with %d unassigned."
            " %d queued, compared to %d total Military Attack Ships"
            % (current_turn, total_troop_ships, total_available_troops, queued_troop_ships, total_military_ships))
-    if (
-        capital_id is not None and
-        (current_turn >= 40 or can_prioritize_troops) and
-        foAI.foAIstate.systemStatus.get(capital_system_id, {}).get('fleetThreat', 0) == 0 and
-        foAI.foAIstate.systemStatus.get(capital_system_id, {}).get('neighborThreat', 0) == 0
-    ):
+    if current_turn >= 40 or can_prioritize_troops:
         best_design_id, best_design, build_choices, _ = get_best_ship_info(PriorityType.PRODUCTION_INVASION)
         if build_choices is not None and len(build_choices) > 0:
             loc = random.choice(build_choices)
