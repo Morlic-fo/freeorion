@@ -557,16 +557,6 @@ def generate_production_orders():
     print "  Wasted Production Points: %s" % wasted_pp  # TODO: add resource group analysis
     avail_pp = total_pp - total_pp_spent - 0.0001
 
-    print
-    if False:
-        print "Possible ship designs to build:"
-        if homeworld:
-            for ship_design_id in empire.availableShipDesigns:
-                design = fo.getShipDesign(ship_design_id)
-                print "    %s cost: %s  time: %s" % (design.name,
-                                                     design.productionCost(empire.empireID, homeworld.id),
-                                                     design.productionTime(empire.empireID, homeworld.id))
-    print
     production_queue = empire.productionQueue
     queued_colony_ships = {}
     queued_outpost_ships = 0
