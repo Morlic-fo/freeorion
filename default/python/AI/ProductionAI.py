@@ -229,6 +229,10 @@ def generate_production_orders():
             print "%30s: %s" % (planet.name, [universe.getBuilding(bldg).name for bldg in planet.buildingIDs])
     print
 
+    find_best_designs_this_turn()
+    ShipDesignAI.Cache.print_hulls_for_planets()
+    ShipDesignAI.Cache.print_parts_for_planets()
+
     if foAI.foAIstate.character.check_orbital_production():
         _build_orbital_defenses()
 
@@ -236,10 +240,6 @@ def generate_production_orders():
     for building_name, building_manager in BuildingsAI.building_manager_map.iteritems():
         if empire.buildingTypeAvailable(building_name):
             building_manager().make_building_decision()
-
-    find_best_designs_this_turn()
-    ShipDesignAI.Cache.print_hulls_for_planets()
-    ShipDesignAI.Cache.print_parts_for_planets()
 
     _build_shipyards()
 
