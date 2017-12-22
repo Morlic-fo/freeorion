@@ -1,6 +1,7 @@
 import math
 import random
 import sys
+from collections import Counter
 
 import freeOrionAIInterface as fo
 import AIDependencies
@@ -408,7 +409,7 @@ def generate_production_orders():
                                                                                 priority, print_enqueue_errors=False):
                             break
 
-    colony_ship_map = {}
+    colony_ship_map = Counter()
     for fid in FleetUtilsAI.get_empire_fleet_ids_by_role(MissionType.COLONISATION):
         fleet = universe.getFleet(fid)
         if not fleet:
@@ -416,7 +417,7 @@ def generate_production_orders():
         for shipID in fleet.shipIDs:
             ship = universe.getShip(shipID)
             if ship and (foAI.foAIstate.get_ship_role(ship.design.id) == ShipRoleType.CIVILIAN_COLONISATION):
-                colony_ship_map.setdefault(ship.speciesName, []).append(1)
+                colony_ship_map[ship.speciesName] += 1
 
     building_name = "BLD_CONC_CAMP"
     verbose_camp = False
@@ -433,21 +434,20 @@ def generate_production_orders():
         c_ind = planet.currentMeterValue(fo.meterType.industry)
         pop_disqualified = (c_pop <= 32) or (c_pop < 0.9*t_pop)
         this_spec = planet.speciesName
-        safety_margin_met = (
-            (this_spec in ColonisationAI.empire_colonizers and (
-                len(state.get_empire_planets_with_species(this_spec)) + len(colony_ship_map.get(this_spec, [])) >= 2))
-            or (c_pop >= 50))
+        safety_margin_met = (c_pop >= 50 or
+                             (this_spec in ColonisationAI.empire_colonizers and
+                              len(state.get_empire_planets_with_species(this_spec)) + colony_ship_map[this_spec] >= 2))
         if pop_disqualified or not safety_margin_met:  # always check in case acquired planet with a ConcCamp on it
             if can_build_camp and verbose_camp:
                 if pop_disqualified:
-                    print "Conc Camp disqualified at %s due to low pop: current %.1f target: %.1f" % (planet.name,
-                                                                                                      c_pop, t_pop)
+                    print "Conc Camp disqualified at %s due to low pop: current %.1f target: %.1f" % (
+                        planet.name, c_pop, t_pop)
                 else:
                     print ("Conc Camp disqualified at %s due to safety margin; species %s,"
                            " colonizing planets %s, with %d colony ships"
-                           % (planet.name, planet.speciesName,
-                              state.get_empire_planets_with_species(planet.speciesName),
-                              len(colony_ship_map.get(planet.speciesName, []))))
+                           % (planet.name, this_spec,
+                              state.get_empire_planets_with_species(this_spec),
+                              colony_ship_map[this_spec]))
             for bldg in planet.buildingIDs:
                 if universe.getBuilding(bldg).buildingTypeName == building_name:
                     res = fo.issueScrapOrder(bldg)
