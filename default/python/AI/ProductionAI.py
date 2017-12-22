@@ -225,8 +225,7 @@ def generate_production_orders():
     print "Buildings present on all owned planets:"
     for pid in state.get_all_empire_planets():
         planet = universe.getPlanet(pid)
-        if planet:
-            print "%30s: %s" % (planet.name, [universe.getBuilding(bldg).name for bldg in planet.buildingIDs])
+        print "%30s: %s" % (planet.name, [universe.getBuilding(bldg).name for bldg in planet.buildingIDs])
     print
 
     find_best_designs_this_turn()
@@ -243,15 +242,7 @@ def generate_production_orders():
 
     _build_shipyards()
 
-    colony_ship_map = Counter()
-    for fid in FleetUtilsAI.get_empire_fleet_ids_by_role(MissionType.COLONISATION):
-        fleet = universe.getFleet(fid)
-        if not fleet:
-            continue
-        for shipID in fleet.shipIDs:
-            ship = universe.getShip(shipID)
-            if ship and (foAI.foAIstate.get_ship_role(ship.design.id) == ShipRoleType.CIVILIAN_COLONISATION):
-                colony_ship_map[ship.speciesName] += 1
+    num_colony_ships_by_species = count_colony_ships()
 
     building_name = "BLD_CONC_CAMP"
     verbose_camp = False
@@ -270,7 +261,7 @@ def generate_production_orders():
         this_spec = planet.speciesName
         safety_margin_met = (c_pop >= 50 or
                              (this_spec in ColonisationAI.empire_colonizers and
-                              len(state.get_empire_planets_with_species(this_spec)) + colony_ship_map[this_spec] >= 2))
+                              len(state.get_empire_planets_with_species(this_spec)) + num_colony_ships_by_species[this_spec] >= 2))
         if pop_disqualified or not safety_margin_met:  # always check in case acquired planet with a ConcCamp on it
             if can_build_camp and verbose_camp:
                 if pop_disqualified:
@@ -281,7 +272,7 @@ def generate_production_orders():
                            " colonizing planets %s, with %d colony ships"
                            % (planet.name, this_spec,
                               state.get_empire_planets_with_species(this_spec),
-                              colony_ship_map[this_spec]))
+                              num_colony_ships_by_species[this_spec]))
             for bldg in planet.buildingIDs:
                 if universe.getBuilding(bldg).buildingTypeName == building_name:
                     res = fo.issueScrapOrder(bldg)
@@ -675,6 +666,20 @@ def generate_production_orders():
     update_stockpile_use()
     fo.updateProductionQueue()
     _print_production_queue(after_turn=True)
+
+
+def count_colony_ships():
+    universe = fo.getUniverse()
+    colony_ship_map = Counter()
+    for fid in FleetUtilsAI.get_empire_fleet_ids_by_role(MissionType.COLONISATION):
+        fleet = universe.getFleet(fid)
+        if not fleet:
+            continue
+        for ship_id in fleet.shipIDs:
+            ship = universe.getShip(ship_id)
+            if ship and foAI.foAIstate.get_ship_role(ship.design.id) == ShipRoleType.CIVILIAN_COLONISATION:
+                colony_ship_map[ship.speciesName] += 1
+    return colony_ship_map
 
 
 def _build_shipyards():
