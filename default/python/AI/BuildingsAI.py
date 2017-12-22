@@ -347,7 +347,7 @@ class ScanningFacilityManager(BuildingManager):
             + bld_cache.queued_buildings.get(self.name, [])))
 
         retval = []
-        for sys_id, pids in state.get_empire_planets_by_system(include_outposts=True):
+        for sys_id, pids in state.get_empire_planets_by_system(include_outposts=True).iteritems():
             if sys_id in covered_systems:
                 continue
 
