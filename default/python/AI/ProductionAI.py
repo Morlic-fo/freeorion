@@ -782,7 +782,7 @@ def _build_orbital_defenses():
             continue  # don't build orbital shields if enemy fleet present
         if defense_allocation > allowed_defense_allocation:
             break
-        sys_orbital_defenses[sys_id] = 0
+        sys_orbital_defenses[sys_id] = queued_defenses.get(sys_id, 0)
         fleets_here = foAI.foAIstate.systemStatus.get(sys_id, {}).get('myfleets', [])
         for fid in fleets_here:
             if foAI.foAIstate.get_fleet_role(fid) == MissionType.ORBITAL_DEFENSE:
@@ -790,8 +790,6 @@ def _build_orbital_defenses():
                     foAI.foAIstate.fleetStatus.get(fid, {}).get('nships', 0),
                     ppstring(PlanetUtilsAI.sys_name_ids([sys_id])))
                 sys_orbital_defenses[sys_id] += foAI.foAIstate.fleetStatus.get(fid, {}).get('nships', 0)
-        for pid in pids:
-            sys_orbital_defenses[sys_id] += queued_defenses.get(pid, 0)
 
         num_needed = target_orbitals - sys_orbital_defenses[sys_id]
         if num_needed <= 0:
