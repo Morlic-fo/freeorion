@@ -241,84 +241,7 @@ def generate_production_orders():
     ShipDesignAI.Cache.print_hulls_for_planets()
     ShipDesignAI.Cache.print_parts_for_planets()
 
-    enqueued_yard = any(name in BuildingsAI.bld_cache.queued_buildings for name in ShipyardAI.shipyard_map)
-    if not enqueued_yard:
-        ShipyardAI.ShipyardManager.ai_priority = PriorityType.PRODUCTION_MILITARY
-        ShipyardAI.ShipyardManager.ship_designer = ShipDesignAI.WarShipDesigner
-        best_candidate = None
-        for shipyard, manager in ShipyardAI.shipyard_map.iteritems():
-            this_manager = manager()
-            if not empire.buildingTypeAvailable(shipyard) or not this_manager.prereqs_available():
-                continue
-            candidate = this_manager.get_candidate()
-            if not candidate:
-                continue
-            if not best_candidate:
-                best_candidate = candidate
-                continue
-            # first, check if we can afford the building.
-            total_cost = candidate.get_total_pp_cost()
-            current_count = 1 if candidate.improvement else len(
-                    BuildingsAI.bld_cache.existing_buildings.get(candidate.name, []))
-            allowance = 7 * BuildingsAI.bld_cache.total_production / current_count
-            if total_cost > allowance:
-                print "Total cost is %.1f but allowance is only %.1f! Do not build!" % (total_cost, allowance)
-                continue
-            if candidate.rating > best_candidate.rating:
-                best_candidate = candidate
-                print "This shipyard is currently the best shipyard!"
-                continue
-            if(candidate.rating == best_candidate.rating
-               and candidate.get_total_pp_cost < best_candidate.get_total_pp_cost
-               ):
-                print "The shipyard %s is no improvement in rating but cheaper than %s" % (candidate.name,
-                                                                                           best_candidate.name)
-                best_candidate = candidate
-                continue
-
-        if best_candidate:
-            if best_candidate.improvement:
-                print "Shipyard %s is a global improvement! Set priority to high..." % best_candidate.name
-                priority = Priority.building_high
-            else:
-                print "Shipyard %s is no global improvement... Set Priority to medium." % best_candidate.name
-                priority = Priority.building_base
-            missing_prereqs = best_candidate.get_missing_prereqs()
-            missing_sys_prereqs = best_candidate.system_prereqs
-            for building in missing_prereqs:
-                print "Missing prerequisite %s (not system-wide) for %s" % (building, best_candidate.name)
-                try:
-                    foAI.foAIstate.production_queue_manager.enqueue_item(
-                            BUILDING, building, best_candidate.pid, priority)
-                except Exception:
-                    # probably can't enqueue building...
-                    print "Exception caught..."
-                    continue
-            for building in missing_sys_prereqs:
-                print "Missing prerequisite %s (system-wide) for %s" % (building, best_candidate.name)
-                for pid in PlanetUtilsAI.get_empire_planets_in_system(best_candidate.sys_id):
-                    try:
-                        res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, building, pid, priority,
-                                                                                   print_enqueue_errors=False)
-                    except Exception:
-                        # Wrong location or building not available...
-                        print "Exception caught..."
-                        continue
-                    if res:
-                        break
-            if not missing_prereqs or missing_sys_prereqs:
-                if not best_candidate.shipyard_is_system_wide:
-                    print "Trying to enqueue %s (not system-wide)" % best_candidate.name
-                    foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, best_candidate.name,
-                                                                         best_candidate.pid, priority)
-                else:
-                    # Some planet in the system has been found to be a valid location.
-                    # Could, in principle, determine the pid before... But we are lazy and enqueue until it works :)
-                    print "Trying to enqueue %s (system-wide)" % best_candidate.name
-                    for pid in PlanetUtilsAI.get_empire_planets_in_system(best_candidate.sys_id):
-                        if foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, best_candidate.name, pid,
-                                                                                priority, print_enqueue_errors=False):
-                            break
+    _build_shipyards()
 
     colony_ship_map = Counter()
     for fid in FleetUtilsAI.get_empire_fleet_ids_by_role(MissionType.COLONISATION):
@@ -752,6 +675,90 @@ def generate_production_orders():
     update_stockpile_use()
     fo.updateProductionQueue()
     _print_production_queue(after_turn=True)
+
+
+def _build_shipyards():
+    enqueued_yard = any(name in BuildingsAI.bld_cache.queued_buildings for name in ShipyardAI.shipyard_map)
+    if enqueued_yard:
+        return
+
+    empire = fo.getEmpire()
+    ShipyardAI.ShipyardManager.ai_priority = PriorityType.PRODUCTION_MILITARY
+    ShipyardAI.ShipyardManager.ship_designer = ShipDesignAI.WarShipDesigner
+    best_candidate = None
+    for shipyard, manager in ShipyardAI.shipyard_map.iteritems():
+        this_manager = manager()
+        if not empire.buildingTypeAvailable(shipyard) or not this_manager.prereqs_available():
+            continue
+        candidate = this_manager.get_candidate()
+        if not candidate:
+            continue
+        if not best_candidate:
+            best_candidate = candidate
+            continue
+        # first, check if we can afford the building.
+        total_cost = candidate.get_total_pp_cost()
+        current_count = 1 if candidate.improvement else len(
+            BuildingsAI.bld_cache.existing_buildings.get(candidate.name, []))
+        allowance = 7 * BuildingsAI.bld_cache.total_production / current_count
+        if total_cost > allowance:
+            print "Total cost is %.1f but allowance is only %.1f! Do not build!" % (total_cost, allowance)
+            continue
+        if candidate.rating > best_candidate.rating:
+            best_candidate = candidate
+            print "This shipyard is currently the best shipyard!"
+            continue
+        if (candidate.rating == best_candidate.rating
+            and candidate.get_total_pp_cost < best_candidate.get_total_pp_cost
+            ):
+            print "The shipyard %s is no improvement in rating but cheaper than %s" % (candidate.name,
+                                                                                       best_candidate.name)
+            best_candidate = candidate
+            continue
+
+    if best_candidate:
+        if best_candidate.improvement:
+            print "Shipyard %s is a global improvement! Set priority to high..." % best_candidate.name
+            priority = Priority.building_high
+        else:
+            print "Shipyard %s is no global improvement... Set Priority to medium." % best_candidate.name
+            priority = Priority.building_base
+        missing_prereqs = best_candidate.get_missing_prereqs()
+        missing_sys_prereqs = best_candidate.system_prereqs
+        for building in missing_prereqs:
+            print "Missing prerequisite %s (not system-wide) for %s" % (building, best_candidate.name)
+            try:
+                foAI.foAIstate.production_queue_manager.enqueue_item(
+                    BUILDING, building, best_candidate.pid, priority)
+            except Exception:
+                # probably can't enqueue building...
+                print "Exception caught..."
+                continue
+        for building in missing_sys_prereqs:
+            print "Missing prerequisite %s (system-wide) for %s" % (building, best_candidate.name)
+            for pid in PlanetUtilsAI.get_empire_planets_in_system(best_candidate.sys_id):
+                try:
+                    res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, building, pid, priority,
+                                                                               print_enqueue_errors=False)
+                except Exception:
+                    # Wrong location or building not available...
+                    print "Exception caught..."
+                    continue
+                if res:
+                    break
+        if not missing_prereqs or missing_sys_prereqs:
+            if not best_candidate.shipyard_is_system_wide:
+                print "Trying to enqueue %s (not system-wide)" % best_candidate.name
+                foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, best_candidate.name,
+                                                                     best_candidate.pid, priority)
+            else:
+                # Some planet in the system has been found to be a valid location.
+                # Could, in principle, determine the pid before... But we are lazy and enqueue until it works :)
+                print "Trying to enqueue %s (system-wide)" % best_candidate.name
+                for pid in PlanetUtilsAI.get_empire_planets_in_system(best_candidate.sys_id):
+                    if foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, best_candidate.name, pid,
+                                                                            priority, print_enqueue_errors=False):
+                        break
 
 
 def _build_orbital_defenses():
