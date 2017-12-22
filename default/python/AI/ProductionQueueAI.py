@@ -36,7 +36,6 @@ class ProductionPriority(object):
 ProductionQueueElement = namedtuple('ProductionQueueElement', ['current_priority', 'base_priority',
                                                                'item_type', 'item', 'location'])
 
-
 class ProductionQueueManager(object):
     """This class handles the priority management of the production queue.
 
@@ -60,13 +59,15 @@ class ProductionQueueManager(object):
         self._last_update = -1                  # turn in which the queue was last updated
 
     def __getstate__(self):
-        return tuple(self._production_queue), self._number_of_invalid_priorities
+        # encode namedtuples as normal tuples
+        retval = dict(self.__dict__)
+        retval['_production_queue'] = [tuple(x) for x in self._production_queue]
+        return retval
 
     def __setstate__(self, state):
-        self.__init__()
-        self._production_queue = list(state[0])
-        self._number_of_invalid_priorities = state[1]
-        self._last_update = -1
+        # convert the stored normal tuples to the correct namedtuples
+        state['_production_queue'] = [ProductionQueueElement(*x) for x in state['_production_queue']]
+        self.__dict__ = state
 
     def __len__(self):
         return len(self._production_queue)
