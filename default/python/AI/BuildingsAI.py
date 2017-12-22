@@ -311,6 +311,25 @@ class ArtificialBlackHoleManager(BuildingManager):
         return True
 
 
+class XenoResurrectionLabManager(BuildingManager):
+    name = "BLD_XENORESURRECTION_LAB"
+    priority = Priority.building_high
+
+    def _suitable_locations(self):
+        empire = fo.getEmpire()
+        return [pid for pid in state.get_all_empire_planets()
+                if empire.canBuild(fo.buildType.building, self.name, pid)
+                and pid not in bld_cache.queued_buildings.get(self.name, [])
+                and pid not in bld_cache.existing_buildings.get(self.name, [])]
+
+    def _need_another_one(self):
+        print 2*WHITESPACE + "No global limit on xeno resurrection lab count!"
+        return True
+
+    def _enqueue_locations(self):
+        return self._suitable_locations()
+
+
 class EconomyBoostBuildingManager(BuildingManager):
     needs_production_focus = False
     needs_research_focus = False
@@ -802,11 +821,12 @@ def _count_empire_foci():
 
 building_manager_map = {
     # bld_name: ManagerClass
-    "BLD_IMPERIAL_PALACE": ImperialPalaceManager,
     "BLD_GENOME_BANK": GenomeBankManager,
-    "BLD_ART_BLACK_HOLE": ArtificialBlackHoleManager,
+    "BLD_IMPERIAL_PALACE": ImperialPalaceManager,
     "BLD_NEUTRONIUM_SYNTH": NeutroniumSynthManager,
     "BLD_NEUTRONIUM_EXTRACTOR": NeutroniumExtractorManager,
+    "BLD_ART_BLACK_HOLE": ArtificialBlackHoleManager,
+    "BLD_XENORESURRECTION_LAB": XenoResurrectionLabManager,
     # economy boost buildings
     "BLD_INDUSTRY_CENTER": IndustrialCenterManager,
     "BLD_ENCLAVE_VOID": VoidEnclaveManager,

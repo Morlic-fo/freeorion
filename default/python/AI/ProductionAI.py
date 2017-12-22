@@ -343,13 +343,6 @@ def generate_production_orders():
                     queued_locs.append(planet.systemID)
                     break
 
-    building_name = "BLD_XENORESURRECTION_LAB"
-    queued_xeno_lab_locs = [element.locationID for element in production_queue if element.name == building_name]
-    for pid in state.get_all_empire_planets():
-        if pid in queued_xeno_lab_locs or not empire.canBuild(fo.buildType.building, building_name, pid):
-            continue
-        foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, building_name, pid, Priority.building_high)
-
     queued_clny_bld_locs = [element.locationID for element in production_queue if element.name.startswith('BLD_COL_')]
     colony_bldg_entries = ([entry for entry in foAI.foAIstate.colonisablePlanetIDs.items() if entry[1][0] > 60 and
                            entry[0] not in queued_clny_bld_locs and entry[0] in state.get_empire_outposts()]
