@@ -756,52 +756,57 @@ def generate_production_orders():
 
 def _build_orbital_defenses():
     universe = fo.getUniverse()
+    empire = fo.getEmpire()
+    production_queue = empire.productionQueue
     sys_orbital_defenses = {}
-    queued_defenses = {}
     defense_allocation = 0.0
+    allowed_defense_allocation = foAI.foAIstate.character.max_defense_portion() * empire.productionPoints
     target_orbitals = foAI.foAIstate.character.target_number_of_orbitals()
-    production_queue = fo.getEmpire().productionQueue
-    max_defense_portion = foAI.foAIstate.character.max_defense_portion()
-    total_pp = fo.getEmpire().productionPoints
     print "Orbital Defense Check -- target Defense Orbitals: ", target_orbitals
+
+    # account already enqueued orbital defenses
+    queued_defenses = {}
     for element in production_queue:
-        if (element.buildType == EmpireProductionTypes.BT_SHIP) and (
-                    foAI.foAIstate.get_ship_role(element.designID) == ShipRoleType.BASE_DEFENSE):
-            planet = universe.getPlanet(element.locationID)
-            if not planet:
-                print >> sys.stderr, "Problem getting Planet for build loc %s" % element.locationID
-                continue
-            sys_id = planet.systemID
-            queued_defenses[sys_id] = queued_defenses.get(sys_id, 0) + element.blocksize * element.remaining
-            defense_allocation += element.allocation
-    print "Queued Defenses:", ppstring([(str(universe.getSystem(sys_id)), num)
-                                        for sys_id, num in queued_defenses.items()])
+        if (element.buildType != EmpireProductionTypes.BT_SHIP or
+                foAI.foAIstate.get_ship_role(element.designID) != ShipRoleType.BASE_DEFENSE):
+            continue
+
+        sys_id = universe.getPlanet(element.locationID).systemID
+        queued_defenses[sys_id] = queued_defenses.get(sys_id, 0) + element.blocksize * element.remaining
+        defense_allocation += element.allocation
+    print "Queued Defenses:", [(ppstring(PlanetUtilsAI.sys_name_ids([sys_id])), num)
+                               for sys_id, num in queued_defenses.items()]
+
     for sys_id, pids in state.get_empire_planets_by_system(include_outposts=False).items():
         if foAI.foAIstate.systemStatus.get(sys_id, {}).get('fleetThreat', 1) > 0:
             continue  # don't build orbital shields if enemy fleet present
-        if defense_allocation > max_defense_portion * total_pp:
+        if defense_allocation > allowed_defense_allocation:
             break
         sys_orbital_defenses[sys_id] = 0
         fleets_here = foAI.foAIstate.systemStatus.get(sys_id, {}).get('myfleets', [])
         for fid in fleets_here:
             if foAI.foAIstate.get_fleet_role(fid) == MissionType.ORBITAL_DEFENSE:
                 print "Found %d existing Orbital Defenses in %s :" % (
-                    foAI.foAIstate.fleetStatus.get(fid, {}).get('nships', 0), universe.getSystem(sys_id))
+                    foAI.foAIstate.fleetStatus.get(fid, {}).get('nships', 0),
+                    ppstring(PlanetUtilsAI.sys_name_ids([sys_id])))
                 sys_orbital_defenses[sys_id] += foAI.foAIstate.fleetStatus.get(fid, {}).get('nships', 0)
         for pid in pids:
             sys_orbital_defenses[sys_id] += queued_defenses.get(pid, 0)
-        if sys_orbital_defenses[sys_id] < target_orbitals:
-            num_needed = target_orbitals - sys_orbital_defenses[sys_id]
-            for pid in pids:
-                best_design_id, col_design, build_choices, _ = get_best_ship_info(
-                    PriorityType.PRODUCTION_ORBITAL_DEFENSE, pid)
-                if not best_design_id:
-                    print "no orbital defenses can be built at ", PlanetUtilsAI.planet_string(pid)
-                    continue
-                for i in xrange(num_needed):
-                    foAI.foAIstate.production_queue_manager.enqueue_item(SHIP, best_design_id,
-                                                                         pid, Priority.ship_orbital_defense)
-                break
+
+        num_needed = target_orbitals - sys_orbital_defenses[sys_id]
+        if num_needed <= 0:
+            continue
+
+        for pid in pids:
+            best_design_id, _, _, _ = get_best_ship_info(PriorityType.PRODUCTION_ORBITAL_DEFENSE, pid)
+            if not best_design_id:
+                print "no orbital defenses can be built at ", PlanetUtilsAI.planet_string(pid)
+                continue
+            for i in xrange(num_needed):
+                foAI.foAIstate.production_queue_manager.enqueue_item(SHIP, best_design_id,
+                                                                     pid, Priority.ship_orbital_defense)
+            break
+
 
 def update_stockpile_use():
     """Decide which elements in the production_queue will be enabled for drawing from the imperial stockpile.  This
