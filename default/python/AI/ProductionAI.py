@@ -315,7 +315,7 @@ def generate_production_orders():
         if not (building_type and building_type.canBeEnqueued(empire.empireID, pid)):
             continue
         res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, building_name, pid,
-                                                                   Priority.building_high)
+                                                                   Priority.building_colony)
         if res:
             break
 

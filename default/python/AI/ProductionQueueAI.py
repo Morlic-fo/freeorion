@@ -21,6 +21,7 @@ class ProductionPriority(object):
     building_low = 1000
     building_base = 100
     building_high = 50
+    building_colony = 10
     ship_scout = 200
     ship_orbital_defense = 300
     ship_mil = 80
