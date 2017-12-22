@@ -330,6 +330,58 @@ class XenoResurrectionLabManager(BuildingManager):
         return self._suitable_locations()
 
 
+class ScanningFacilityManager(BuildingManager):
+    name = "BLD_SCANNING_FACILITY"
+    priority = Priority.building_low
+
+    def _suitable_locations(self):
+        # TODO Improve the logic where we want to build scanners
+        # - consider current and future scan range - which systems are unlocked?
+        # - can an enemy actually come from those systems?
+        # - actually rank the candidates by some score
+        universe = fo.getUniverse()
+        empire_id = fo.empireID()
+        covered_systems = set()
+        covered_systems.update(PlanetUtilsAI.get_systems(
+            bld_cache.existing_buildings.get(self.name, [])
+            + bld_cache.queued_buildings.get(self.name, [])))
+
+        retval = []
+        for sys_id, pids in state.get_empire_planets_by_system(include_outposts=True):
+            if sys_id in covered_systems:
+                continue
+
+            # build scanners where we do not have vision of neighbor systems.
+            if not any(universe.getVisibility(n, empire_id) < fo.visibility.partial
+                       for n in universe.getImmediateNeighbors(sys_id, empire_id)):
+                continue
+
+            # within a given system, try to build on the planet with the most
+            # troops, i.e. the one hardest for the enemy to conquer
+            # TODO: Consider building on the "least important" planet instead
+            cur_candidate = None
+            max_troops = -1
+            for pid in pids:
+                troops = universe.getPlanet(pid).currentMeterValue(fo.meterType.maxTroops)
+                if troops > max_troops:
+                    cur_candidate = pid
+                    max_troops = troops
+            if cur_candidate is not None:
+                retval.append(cur_candidate)
+
+        return retval
+
+    def _need_another_one(self):
+        print 2*WHITESPACE, "No restrictions on the amount of scanning facilities"
+        return True
+
+    def _enqueue_locations(self):
+        maximum_enqueud_scanners = int(max(1, fo.getEmpire().productionPoints/30))
+        already_queued = len(bld_cache.queued_buildings.get(self.name, []))
+        amount_to_enqueue = maximum_enqueud_scanners - already_queued
+        return self._suitable_locations()[:amount_to_enqueue]
+
+
 class EconomyBoostBuildingManager(BuildingManager):
     needs_production_focus = False
     needs_research_focus = False
@@ -827,6 +879,7 @@ building_manager_map = {
     "BLD_NEUTRONIUM_EXTRACTOR": NeutroniumExtractorManager,
     "BLD_ART_BLACK_HOLE": ArtificialBlackHoleManager,
     "BLD_XENORESURRECTION_LAB": XenoResurrectionLabManager,
+    "BLD_SCANNING_FACILITY": ScanningFacilityManager,
     # economy boost buildings
     "BLD_AUTO_HISTORY_ANALYSER": AutoHistoryAnalyzerManager,
     "BLD_INDUSTRY_CENTER": IndustrialCenterManager,

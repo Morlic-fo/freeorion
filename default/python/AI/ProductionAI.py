@@ -304,45 +304,6 @@ def generate_production_orders():
                     if res:
                         queued_building_locs.append(pid)
 
-    building_name = "BLD_SCANNING_FACILITY"
-    if empire.buildingTypeAvailable(building_name):
-        queued_locs = [element.locationID for element in production_queue if (element.name == building_name)]
-        scanner_locs = {}
-        for pid in state.get_all_empire_planets():
-            planet = universe.getPlanet(pid)
-            if planet:
-                if (pid in queued_locs) or (building_name in [bld.buildingTypeName for bld in map(universe.getBuilding,
-                                                                                                  planet.buildingIDs)]):
-                    scanner_locs[planet.systemID] = True
-        max_scanner_builds = max(1, int(empire.productionPoints / 30))
-        for sys_id in state.get_empire_planets_by_system().keys():
-            if len(queued_locs) >= max_scanner_builds:
-                break
-            if sys_id in scanner_locs:
-                continue
-            need_scanner = False
-            for nSys in universe.getImmediateNeighbors(sys_id, empire.empireID):
-                if universe.getVisibility(nSys, empire.empireID) < fo.visibility.partial:
-                    need_scanner = True
-                    break
-            if not need_scanner:
-                continue
-            build_locs = []
-            for pid in state.get_empire_planets_by_system(sys_id):
-                planet = universe.getPlanet(pid)
-                if not planet:
-                    continue
-                build_locs.append((planet.currentMeterValue(fo.meterType.maxTroops), pid))
-            if not build_locs:
-                continue
-            for troops, loc in sorted(build_locs):
-                planet = universe.getPlanet(loc)
-                res = foAI.foAIstate.production_queue_manager.enqueue_item(BUILDING, building_name, loc,
-                                                                           Priority.building_low)
-                if res:
-                    queued_locs.append(planet.systemID)
-                    break
-
     queued_clny_bld_locs = [element.locationID for element in production_queue if element.name.startswith('BLD_COL_')]
     colony_bldg_entries = ([entry for entry in foAI.foAIstate.colonisablePlanetIDs.items() if entry[1][0] > 60 and
                            entry[0] not in queued_clny_bld_locs and entry[0] in state.get_empire_outposts()]
