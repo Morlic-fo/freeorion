@@ -529,7 +529,7 @@ class AutoHistoryAnalyzerManager(EconomyBoostBuildingManager):
         return chosen_locations
 
     def _enqueue_locations(self):
-        return self._suitable_locations() or None
+        return self._suitable_locations()
 
     def _need_another_one(self):
         return True  # as long as we have suitable locations...
@@ -828,6 +828,7 @@ building_manager_map = {
     "BLD_ART_BLACK_HOLE": ArtificialBlackHoleManager,
     "BLD_XENORESURRECTION_LAB": XenoResurrectionLabManager,
     # economy boost buildings
+    "BLD_AUTO_HISTORY_ANALYSER": AutoHistoryAnalyzerManager,
     "BLD_INDUSTRY_CENTER": IndustrialCenterManager,
     "BLD_ENCLAVE_VOID": VoidEnclaveManager,
     "BLD_GAS_GIANT_GEN": GasGiantGeneratorManager,
