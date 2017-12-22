@@ -217,23 +217,9 @@ def generate_production_orders():
     empire = fo.getEmpire()
     production_queue = empire.productionQueue
     total_pp = empire.productionPoints
-    # prodResPool = empire.getResourcePool(fo.resourceType.industry)
-    # available_pp = dict_from_map(production_queue.available_pp(prodResPool))
-    # allocated_pp = dict_from_map(production_queue.allocated_pp)
-    # objectsWithWastedPP = production_queue.objectsWithWastedPP(prodResPool)
     current_turn = fo.currentTurn()
     print
     print "  Total Available Production Points: %s" % total_pp
-
-    claimed_stars = foAI.foAIstate.misc.get('claimedStars', {})
-    if claimed_stars == {}:
-        for sType in AIstate.empireStars:
-            claimed_stars[sType] = list(AIstate.empireStars[sType])
-        for sys_id in set(AIstate.colonyTargetedSystemIDs + AIstate.outpostTargetedSystemIDs):
-            t_sys = universe.getSystem(sys_id)
-            if not t_sys:
-                continue
-            claimed_stars.setdefault(t_sys.starType, []).append(sys_id)
 
     if current_turn == 1 and len(AIstate.opponentPlanetIDs) == 0 and len(production_queue) == 0:
         best_design_id, _, build_choices, _ = get_best_ship_info(PriorityType.PRODUCTION_EXPLORATION)
