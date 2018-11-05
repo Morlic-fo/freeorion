@@ -10,6 +10,7 @@ import EspionageAI
 import FleetUtilsAI
 import MoveUtilsAI
 import MilitaryAI
+import PlanetUtilsAI
 import InvasionAI
 import CombatRatingsAI
 from aistate_interface import get_aistate
@@ -396,7 +397,7 @@ class AIFleetMission(object):
         """issues AIFleetOrders which can be issued in system and moves to next one if is possible"""
         # TODO: priority
         order_completed = True
-
+        start_evasive_maneuvers = False
         debug("\nChecking orders for fleet %s (on turn %d), with mission type %s" % (
             self.fleet.get_object(), fo.currentTurn(), self.type or 'No mission'))
         if MissionType.INVASION == self.type:
@@ -461,6 +462,8 @@ class AIFleetMission(object):
                             self.clear_fleet_orders()
                             self.clear_target()
                             return
+                if self.current_threat_level(self.fleet.get_system().id):
+                    start_evasive_maneuvers = True
                 break  # do not order the next order until this one is finished.
         else:  # went through entire order list
             if order_completed:
@@ -561,6 +564,69 @@ class AIFleetMission(object):
                     if allocations:
                         MilitaryAI.assign_military_fleets_to_systems(use_fleet_id_list=new_military_fleets,
                                                                      allocations=allocations)
+                if self.current_threat_level(self.fleet.get_system().id):
+                    start_evasive_maneuvers = True
+
+        # TODO: Add some more sophisticated logic
+        if start_evasive_maneuvers:
+            target_sys = self.find_escape_route()
+            fo.issueFleetMoveOrder(self.fleet.id, target_sys)
+            debug("Issuing evasive order: fleet: %s target: %s" % (self.fleet, target_sys))
+
+    def current_threat_level(self, system_id):
+        universe = fo.getUniverse()
+        aistate = get_aistate()
+        fleet = universe.getFleet(self.fleet.id)
+
+        local_threat = MilitaryAI.get_system_local_threat(system_id)
+        neighboring_threat = MilitaryAI.get_system_neighbor_threat(system_id)
+        total_threat = CombatRatingsAI.combine_ratings(local_threat, neighboring_threat)
+
+        if not total_threat:
+            debug("Fleet %s is currently not threatened in system %d", self.fleet, system_id)
+            return 0
+
+        is_military = aistate.get_fleet_role(self.fleet.id) == MissionType.MILITARY
+
+        # TODO Add logic for planetary defenses
+        local_fleet_rating = aistate.systemStatus.get(self.fleet.id, {}).get('myFleetRating', 0)
+        my_rating = CombatRatingsAI.get_fleet_rating(self.fleet.id)
+
+        if system_id == fleet.systemID:
+            pass
+        else:
+            local_fleet_rating = CombatRatingsAI.combine_ratings(my_rating, local_fleet_rating)
+
+        safety_factor = aistate.character.military_safety_factor()
+
+        if is_military and local_fleet_rating > safety_factor * total_threat:
+            debug("Fleet %s is under threat but has sufficient strength")
+            return 1
+
+        if local_fleet_rating > 3 * safety_factor * total_threat:
+            debug("Fleet %s is threatened but has sufficient military cover")
+            return 1
+
+        debug("Fleet %s is currently under threat! Prepare evasive maneuvers...")
+        return total_threat
+
+    def find_escape_route(self):
+        universe = fo.getUniverse()
+        fleet = universe.getFleet(self.fleet.id)
+        system_id = fleet.systemID if fleet.systemID is not INVALID_ID else fleet.nextSystemID
+
+        neighbors = universe.getImmediateNeighbors(system_id, fo.empireID())
+        if not neighbors:
+            return None
+        candidates = []
+        target_system = self.target.id if self.target else PlanetUtilsAI.get_capital_sys_id()
+        for neighbor in neighbors:
+            threat = self.current_threat_level(neighbor)
+            jump_distance = universe.jumpDistance(neighbor, target_system)
+            candidates.append((threat, jump_distance, neighbor))
+
+        candidates.sort()
+        return candidates[0][2]  # best system
 
     def generate_fleet_orders(self):
         """generates AIFleetOrders from fleets targets to accomplish"""
@@ -580,7 +646,7 @@ class AIFleetMission(object):
         # then repair if needed or resupply if is current location not in supplyable system
         empire = fo.getEmpire()
         fleet_supplyable_system_ids = empire.fleetSupplyableSystemIDs
-        # if (not self.hasAnyAIMissionTypes()):
+
         if not self.target and (system_id not in set(AIstate.colonyTargetedSystemIDs +
                                                      AIstate.outpostTargetedSystemIDs +
                                                      AIstate.invasionTargetedSystemIDs)):
