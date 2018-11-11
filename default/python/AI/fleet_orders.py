@@ -188,16 +188,17 @@ class OrderMove(AIFleetOrder):
         fleet_rating = CombatRatingsAI.get_fleet_rating(self.fleet.id)
         fleet_rating_vs_planets = CombatRatingsAI.get_fleet_rating_against_planets(self.fleet.id)
         target_sys_status = aistate.systemStatus.get(self.target.id, {})
-        f_threat = target_sys_status.get('fleetThreat', 0)
-        m_threat = target_sys_status.get('monsterThreat', 0)
-        p_threat = target_sys_status.get('planetThreat', 0)
-        threat = f_threat + m_threat + p_threat
+
+        p_threat = MilitaryAI.get_system_planetary_threat(self.target.id)
+        local_threat = MilitaryAI.get_system_local_threat(self.target.id)
+        neighbor_threat = MilitaryAI.get_system_neighbor_threat(self.target.id)
+        total_threat = CombatRatingsAI.combine_ratings(local_threat, neighbor_threat)
         safety_factor = aistate.character.military_safety_factor()
         universe = fo.getUniverse()
-        if main_fleet_mission.type == MissionType.INVASION and not trooper_move_reqs_met(main_fleet_mission,
-                                                                                         self, verbose):
+        if (main_fleet_mission.type == MissionType.INVASION and
+                not trooper_move_reqs_met(main_fleet_mission, self, verbose)):
             return False
-        if fleet_rating >= safety_factor * threat and fleet_rating_vs_planets >= p_threat:
+        if fleet_rating >= safety_factor * total_threat and fleet_rating_vs_planets >= p_threat:
             return True
         elif not p_threat and self.target.id in fo.getEmpire().supplyUnobstructedSystems:
             return True
@@ -215,13 +216,13 @@ class OrderMove(AIFleetOrder):
             total_rating = CombatRatingsAI.combine_ratings(my_other_fleet_rating, fleet_rating)
             total_rating_vs_planets = CombatRatingsAI.combine_ratings(my_other_fleet_rating_vs_planets,
                                                                       fleet_rating_vs_planets)
-            if (my_other_fleet_rating > 3 * safety_factor * threat or
-                    (is_military and total_rating_vs_planets > 2.5*p_threat and total_rating > safety_factor * threat)):
+            if (my_other_fleet_rating > 3 * safety_factor * total_threat or
+                    (is_military and total_rating_vs_planets > 2.5*p_threat and total_rating > safety_factor * total_threat)):
                 debug(("\tAdvancing fleet %d (rating %d) at system %d (%s) into system %d (%s) with threat %d"
                        " because of sufficient empire fleet strength already at destination") %
-                      (self.fleet.id, fleet_rating, system_id, sys1_name, self.target.id, target_system_name, threat))
+                      (self.fleet.id, fleet_rating, system_id, sys1_name, self.target.id, target_system_name, total_threat))
                 return True
-            elif (threat == p_threat and
+            elif (total_threat == p_threat and
                   not self.fleet.get_object().aggressive and
                   not my_other_fleet_rating and
                   not target_sys_status.get('localEnemyFleetIDs', [-1])):
@@ -229,13 +230,13 @@ class OrderMove(AIFleetOrder):
                     debug("\tAdvancing fleet %d (rating %d) at system %d (%s) "
                           "into system %d (%s) with planet threat %d because non aggressive"
                           " and no other fleets present to trigger combat") % (
-                        self.fleet.id, fleet_rating, system_id, sys1_name, self.target.id, target_system_name, threat)
+                        self.fleet.id, fleet_rating, system_id, sys1_name, self.target.id, target_system_name, total_threat)
                 return True
             else:
                 if verbose:
                     debug("\tHolding fleet %d (rating %d) at system %d (%s) "
                           "before travelling to system %d (%s) with threat %d") % (
-                        self.fleet.id, fleet_rating, system_id, sys1_name, self.target.id, target_system_name, threat)
+                        self.fleet.id, fleet_rating, system_id, sys1_name, self.target.id, target_system_name, total_threat)
                 needs_vis = aistate.misc.setdefault('needs_vis', [])
                 if self.target.id not in needs_vis:
                     needs_vis.append(self.target.id)
