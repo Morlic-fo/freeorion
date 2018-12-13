@@ -5,8 +5,9 @@ from functools import wraps
 from logging import debug, info, warn, error
 
 import freeOrionAIInterface as fo
-import FreeOrionAI as foAI
 from graph_interface import Graph, NoPathException
+
+from aistate_interface import get_aistate
 
 
 # If set to true, this flag will deepcopy the universe graph before
@@ -70,19 +71,21 @@ class _UniverseGraph(Graph):
                 'pos': (system.x, system.y),
                 'name':  system.name,
             }
+
+            aistate = get_aistate()
             # do not add empty/False attributes to the dict
             if owners:
                 node_dict['owners'] = tuple(owners)
-            if system_id in foAI.foAIstate.exploredSystemIDs:
+            if system_id in aistate.exploredSystemIDs:
                 node_dict['explored'] = True
-            if system_id == foAI.foAIstate._AIstate__origin_home_system_id:
+            if system_id == aistate._AIstate__origin_home_system_id:
                 node_dict['home_system'] = True
             if universe.getVisibilityTurnsMap(system_id, empire_id).get(fo.visibility.partial, -9999) > -1:
                 node_dict['scanned'] = True
 
             self.add_node(system_id, attr_dict=node_dict)
 
-            for neighbor in foAI.foAIstate.systemStatus[system_id].get('neighbors', []):
+            for neighbor in aistate.systemStatus[system_id].get('neighbors', []):
                 self.add_edge(system_id, neighbor, distance=universe.linearDistance(system_id, neighbor))
 
     def owned_nodes(self):
