@@ -904,18 +904,11 @@ def evaluate_planet(planet_id, mission_type, spec_name, detail=None):
             supply_val += 25 * (planet_supply - sys_supply)
         detail.append("sys_supply: %d, planet_supply: %d, supply_val: %.0f" % (sys_supply, planet_supply, supply_val))
         retval += supply_val
-<<<<<<< HEAD
-
         if threat_factor < 1.0:
             threat_factor = revise_threat_factor(threat_factor, retval, this_sysid, MINIMUM_COLONY_SCORE)
             retval *= threat_factor
             detail.append("threat reducing value by %3d %%" % (100 * (1 - threat_factor)))
-=======
-        if thrt_factor < 1.0:
-            retval *= thrt_factor
-            detail.append("threat reducing value by %3d %%" % (100 * (1 - thrt_factor)))
         retval *= strategic_value
->>>>>>> Consider strategic position for colonization/invasion value
         return int(retval)
     else:  # colonization mission
         if not species:
@@ -1077,17 +1070,11 @@ def evaluate_planet(planet_id, mission_type, spec_name, detail=None):
         if existing_presence:
             detail.append("preexisting system colony")
             retval = (retval + existing_presence * get_defense_value(spec_name)) * 2
-<<<<<<< HEAD
         if threat_factor < 1.0:
             threat_factor = revise_threat_factor(threat_factor, retval, this_sysid, MINIMUM_COLONY_SCORE)
             retval *= threat_factor
             detail.append("threat reducing value by %3d %%" % (100 * (1 - threat_factor)))
-=======
-        if thrt_factor < 1.0:
-            retval *= thrt_factor
-            detail.append("threat reducing value by %3d %%" % (100 * (1 - thrt_factor)))
         retval *= strategic_value
->>>>>>> Consider strategic position for colonization/invasion value
     return retval
 
 
