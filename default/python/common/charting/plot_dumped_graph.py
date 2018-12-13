@@ -4,6 +4,7 @@ import sys
 from glob import glob
 from ast import literal_eval
 import traceback
+import pylab
 
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -11,6 +12,9 @@ import matplotlib.patches as mpatches
 from matplotlib.widgets import CheckButtons
 from matplotlib.legend_handler import HandlerPatch
 
+import Tkinter as tk
+import ttk
+import uuid
 
 class HandlerCircle(HandlerPatch):
     def create_artists(self, legend, orig_handle,
@@ -20,6 +24,113 @@ class HandlerCircle(HandlerPatch):
         self.update_prop(p, orig_handle, legend)
         p.set_transform(trans)
         return [p]
+
+
+class NoNodeFoundException(Exception):
+    pass
+
+
+def j_tree(tree, parent, dic):
+    for key in sorted(dic.keys()):
+        uid = uuid.uuid4()
+        if isinstance(dic[key], dict):
+            tree.insert(parent, 'end', uid, text=key)
+            j_tree(tree, uid, dic[key])
+        elif isinstance(dic[key], tuple):
+            tree.insert(parent, 'end', uid, text=str(key) + '()')
+            j_tree(tree, uid,
+                   dict([(i, x) for i, x in enumerate(dic[key])]))
+        elif isinstance(dic[key], list):
+            tree.insert(parent, 'end', uid, text=str(key) + '[]')
+            j_tree(tree, uid,
+                   dict([(i, x) for i, x in enumerate(dic[key])]))
+        else:
+            value = dic[key]
+            if isinstance(value, str):
+                value = value.replace(' ', '_')
+            tree.insert(parent, 'end', uid, text=key, value=value)
+
+
+root = None
+
+def tk_tree_view(data):
+    # Setup the root UI
+    global root
+    root = tk.Tk()
+    root.title("tk_tree_view")
+    root.columnconfigure(0, weight=1)
+    root.rowconfigure(0, weight=1)
+
+    # Setup the Frames
+    tree_frame = ttk.Frame(root, padding="3")
+    tree_frame.grid(row=0, column=0, sticky=tk.NSEW)
+
+    # Setup the Tree
+    tree = ttk.Treeview(tree_frame, columns=('Values'))
+    tree.column('Values', width=100, anchor='center')
+    tree.heading('Values', text='Values')
+    j_tree(tree, '', data)
+    tree.pack(fill=tk.BOTH, expand=1)
+
+    # Limit windows minimum dimensions
+    root.update_idletasks()
+    root.minsize(root.winfo_reqwidth(), root.winfo_reqheight())
+    root.mainloop()
+
+
+class OnClickCallback:
+    def __init__(self, xdata, ydata, aux_data,
+                 axis=None, xtol=None, ytol=None):
+        self.data = zip(xdata, ydata, aux_data)
+        if xtol is None:
+            xtol = ((max(xdata) - min(xdata))/float(len(xdata)))/2
+        if ytol is None:
+            ytol = ((max(ydata) - min(ydata))/float(len(ydata)))/2
+        self.xtol = xtol
+        self.ytol = ytol
+        if axis is None:
+            axis = pylab.gca()
+        self.axis = axis
+        print xdata
+        print ydata
+
+    def __call__(self, event):
+        print "Callback"
+        # only react to clicks in our axis
+        if not event.inaxes or self.axis != event.inaxes:
+            print "Not in axes..."
+            return
+
+        try:
+            x, y, aux = self.find_nearest_node(event.xdata, event.ydata)
+        except NoNodeFoundException:
+            print "No Node found!"
+            return
+
+        self.display_data(aux)
+
+    def find_nearest_node(self, x_click, y_click):
+        print x_click, y_click
+        print self.data
+        candidates = [
+            ((x - x_click) ** 2 + (y - y_click) ** 2, x, y, aux)
+            for x, y, aux in self.data if
+            x_click - self.xtol < x < x_click + self.xtol and
+            y_click - self.ytol < y < y_click + self.ytol
+        ]
+        if not candidates:
+            raise NoNodeFoundException()
+
+        candidates.sort()
+        distance, x, y, aux = candidates[0]
+        return x, y, aux
+
+    def display_data(self, data):
+        # do something with the annote value
+        global root
+        if root is not None:
+            root.destroy()
+        tk_tree_view(data)
 
 
 def parse_file(file_name):
@@ -67,6 +178,7 @@ def parse_file(file_name):
     g.add_edges_from(edges)
     return g, empire_id, empire_name
 
+
 color_map = OrderedDict([('Home', '#00008B'),
                          ('Own Colony', '#4169E1'),
                          ('Own Border Colony', '#3ADF00'),
@@ -81,6 +193,7 @@ color_map = OrderedDict([('Home', '#00008B'),
                          ])
 color_name_lookup = OrderedDict([(tag, color) for color, tag in color_map.items()])
 
+
 def _extract_borders(g):
     all_borders = {data['border_number'] for n, data in g.nodes(data=True) if 'border_number' in data}
     border_map = {
@@ -91,7 +204,9 @@ def _extract_borders(g):
     }
     return border_map
 
+
 def draw(g, empire_id, empire_name):
+    fig = plt.figure()
     plot_selection = {'Border systems': True, 'Expansion systems': False, 'Offensive Systems': False}
     border_map = _extract_borders(g)
     edges = [(u, v) for (u, v) in g.edges()]
@@ -159,7 +274,18 @@ def draw(g, empire_id, empire_name):
         except:
             short_name = "AI Empire ID: %d" % empire_id
         plt.title(short_name)
-        plt.gcf().canvas.draw()
+
+        all_x = []
+        all_y = []
+        all_data = []
+        for n, data in g.nodes(data=True):
+            all_x.append(data['pos'][0])
+            all_y.append(-data['pos'][1])
+            all_data.append(data)
+        fig = plt.gcf()
+        fig.canvas.mpl_connect('button_press_event', OnClickCallback(all_x, all_y, all_data))
+        fig.canvas.draw()
+
 
     draw_graph()
 
