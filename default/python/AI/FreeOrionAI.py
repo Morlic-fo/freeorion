@@ -329,6 +329,7 @@ def generateOrders():  # pylint: disable=invalid-name
     debug("Calling AI Modules")
     # call AI modules
     action_list = [ColonisationAI.survey_universe,
+                   UniverseStrategyAI.update_universe_graph_for_new_turn,
                    ProductionAI.find_best_designs_this_turn,
                    PriorityAI.calculate_priorities,
                    ExplorationAI.assign_scouts_to_explore_systems,
@@ -340,7 +341,6 @@ def generateOrders():  # pylint: disable=invalid-name
                    ResearchAI.generate_research_orders,
                    ProductionAI.generate_production_orders,
                    ResourcesAI.generate_resources_orders,
-                   UniverseStrategyAI.update_universe_graph_for_new_turn,
                    ]
 
     for action in action_list:
