@@ -496,18 +496,15 @@ def evaluate_invasion_planet(planet_id, secure_fleet_missions, verbose=True):
         planet_score *= 1.5
     strategic_factor = 1.5 if system_id in UniverseStrategyAI.get_good_attackpoints() else 1.0
     if verbose:
-        debug(' - planet score: %.2f\n'
-              ' - planned troops: %.2f\n'
-              ' - projected troop cost: %.1f\n'
-              ' - threat factor: %s\n'
-              ' - planet detail: %s\n'
-              ' - popval: %.1f\n'
-              ' - bldval: %s\n'
-              ' - enemyval: %s\n',
-              ' - strategic factor: %.1f',
-              planet_score, planned_troops, troop_cost,
-              threat_factor, detail, colony_base_value,
-              bld_tally, enemy_val, strategic_factor)
+        debug(' - planet score: %.2f', planet_score)
+        debug(' - planned troops: %.2f', planned_troops)
+        debug(' - projected troop cost: %.1f', troop_cost)
+        debug(' - threat factor: %s', threat_factor)
+        debug(' - planet detail: %s', detail)
+        debug(' - popval: %.1f', colony_base_value)
+        debug(' - bldval: %s', bld_tally)
+        debug(' - enemyval: %s', enemy_val)
+        debug(' - strategic factor: %.1f', strategic_factor)
         debug(' - system secured: %s' % system_secured)
     return [planet_score, planned_troops]
 
