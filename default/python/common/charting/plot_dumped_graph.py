@@ -44,6 +44,10 @@ def j_tree(tree, parent, dic):
             tree.insert(parent, 'end', uid, text=str(key) + '[]')
             j_tree(tree, uid,
                    dict([(i, x) for i, x in enumerate(dic[key])]))
+        elif isinstance(dic[key], set):
+            tree.insert(parent, 'end', uid, text=str(key) + '{}')
+            j_tree(tree, uid,
+                   dict([(i, x) for i, x in enumerate(dic[key])]))
         else:
             value = dic[key]
             if isinstance(value, str):
