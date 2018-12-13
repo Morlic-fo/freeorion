@@ -1,14 +1,12 @@
 import copy
 import sys
-from functools import wraps
 from collections import namedtuple
+from functools import wraps
+from logging import debug, info, warn, error
 
 import freeOrionAIInterface as fo
 import FreeOrionAI as foAI
 from graph_interface import Graph, NoPathException
-
-from common.configure_logging import convenience_function_references_for_logger
-(debug, info, warn, error, fatal) = convenience_function_references_for_logger(__name__)
 
 
 # If set to true, this flag will deepcopy the universe graph before
