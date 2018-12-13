@@ -9,6 +9,7 @@ import InvasionAI
 import PlanetUtilsAI
 import PriorityAI
 import ProductionAI
+import UniverseStrategyAI
 from AIDependencies import INVALID_ID
 from aistate_interface import get_aistate
 from CombatRatingsAI import combine_ratings, combine_ratings_list, rating_difference
@@ -19,7 +20,7 @@ from turn_state import state
 
 MinThreat = 10  # the minimum threat level that will be ascribed to an unknown threat capable of killing scouts
 _military_allocations = []
-_verbose_mil_reporting = False
+_verbose_mil_reporting = True
 _best_ship_rating_cache = {}  # indexed by turn, value is rating of that turn
 
 
@@ -571,16 +572,35 @@ class ExplorationTargetAllocator(LocalThreatAllocator):
         return False
 
 
-class BorderSecurityAllocator(LocalThreatAllocator):
+class SystemDefenseAllocator(LocalThreatAllocator):
     _min_alloc_factor = 1.2
     _max_alloc_factor = 2
     _allocation_group = 'accessibleTargets'
 
     def __init__(self, sys_id, allocation_helper):
-        super(BorderSecurityAllocator, self).__init__(sys_id, allocation_helper)
+        super(SystemDefenseAllocator, self).__init__(sys_id, allocation_helper)
 
     def _maximum_allocation(self, threat):
         return self._max_alloc_factor * self.safety_factor * max(self._local_threat(), self._neighbor_threat())
+
+
+class BorderDefenseAllocator(Allocator):
+    _allocation_group = "border"
+
+    def _calculate_threat(self):
+        return 0
+
+    def _maximum_allocation(self, threat):
+        return get_concentrated_tot_mil_rating() / len(UniverseStrategyAI.get_border_systems())
+
+    def _minimum_allocation(self, threat):
+        return 0.1
+
+    def _take_any(self):
+        return True
+
+    def _handle_not_enough_resources(self, ratio):
+        pass
 
 
 class ReleaseMilitaryException(Exception):
@@ -775,7 +795,12 @@ def get_military_fleets(mil_fleets_ids=None, try_reset=True, thisround="Main"):
             allocation_helper.threat_bias + systems_status.get(sid, {}).get('fleetThreat', 0) + systems_status.get(sid, {}).get(
                     'planetThreat', 0) > 0.8 * allocation_helper.already_assigned_rating[sid])]
         for sys_id in border_targets:
-            BorderSecurityAllocator(sys_id, allocation_helper).allocate()
+            SystemDefenseAllocator(sys_id, allocation_helper).allocate()
+
+        # finally, move remaining military resources into border systems
+        for sys_id in UniverseStrategyAI.get_border_systems():
+            BorderDefenseAllocator(sys_id, allocation_helper).allocate()
+
     except ReleaseMilitaryException:
         try_again(all_military_fleet_ids)
         return
@@ -811,6 +836,15 @@ def get_military_fleets(mil_fleets_ids=None, try_reset=True, thisround="Main"):
                 new_rating = min(local_max_avail, max_alloc)
                 new_allocations.append((sid, new_rating, alloc, rvp, take_any))
                 remaining_mil_rating = rating_difference(local_max_avail, new_rating)
+
+    for sid, alloc, rvp, take_any, max_alloc in allocation_helper.allocation_by_groups.get('border', []):
+        if remaining_mil_rating <= 0:
+            debug("No more resources for border defense.")
+            break
+        this_alloc = min(remaining_mil_rating, max_alloc)
+        new_allocations.append((sid, this_alloc, alloc, rvp, take_any))
+        debug("Allocated %d to border system %d", this_alloc, sid)
+        remaining_mil_rating = rating_difference(remaining_mil_rating, this_alloc)
 
     if "Main" in thisround:
         _military_allocations = new_allocations
@@ -922,7 +956,6 @@ def assign_military_fleets_to_systems(use_fleet_id_list=None, allocations=None, 
             allocations = get_military_fleets(mil_fleets_ids=avail_mil_fleet_ids, try_reset=False, thisround=thisround)
         if allocations:
             assign_military_fleets_to_systems(use_fleet_id_list=avail_mil_fleet_ids, allocations=allocations, round=round)
-
 
 @cache_by_turn
 def get_tot_mil_rating():
