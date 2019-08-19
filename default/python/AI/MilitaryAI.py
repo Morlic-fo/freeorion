@@ -915,6 +915,7 @@ def assign_military_fleets_to_systems(use_fleet_id_list=None, allocations=None, 
             else:
                 mission_type = MissionType.MILITARY
             fleet_mission.set_target(mission_type, target)
+            fleet_mission.check_mergers()
             fleet_mission.generate_fleet_orders()
             if not doing_main:
                 aistate.misc.setdefault('ReassignedFleetMissions', []).append(fleet_mission)
