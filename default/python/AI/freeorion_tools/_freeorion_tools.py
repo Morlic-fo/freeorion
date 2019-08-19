@@ -373,3 +373,19 @@ def assertion_fails(cond, msg="", logger=logging.error):
     logger("%s Traceback (most recent call last): %s", header,
            ''.join(traceback.format_list(stack)))
     return True
+
+
+def median(the_list):
+    """Return median value of a non-empty list of numbers.
+
+    It is the caller's duty to check that the input list satisfies the conditions."""
+    if (assertion_fails(isinstance(the_list, list), "Passed non-list to median()")
+            or assertion_fails(the_list, "Passed empty list to median")):
+        return None
+
+    the_list = sorted(the_list)
+
+    half = len(the_list) // 2
+    if not len(the_list) % 2:
+        return (the_list[half - 1] + the_list[half]) / 2.0
+    return the_list[half]
