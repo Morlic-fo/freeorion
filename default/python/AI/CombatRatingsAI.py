@@ -1,12 +1,14 @@
 from collections import Counter
 from logging import warn
 
+
 import freeOrionAIInterface as fo
 import FleetUtilsAI
 from EnumsAI import MissionType
-from freeorion_tools import get_ai_tag_grade, dict_to_tuple, tuple_to_dict, cache_by_session
+from freeorion_tools import get_ai_tag_grade, dict_to_tuple, tuple_to_dict, cache_by_session, median, assertion_fails
 from ShipDesignAI import get_part_type
 from AIDependencies import INVALID_ID
+from aistate_interface import get_aistate
 
 
 def get_empire_standard_fighter():
@@ -269,6 +271,45 @@ class FleetCombatStats(object):
             return
         for ship_id in fleet.shipIDs:
             self.__ship_stats.append(ShipCombatStats(ship_id, self._consider_refuel))
+
+
+def get_fleet_rating_vs_enemy_system(fleet_id, system_id):
+    """Calculate the fleet rating for an owned fleet weighted against enemies present in system.
+
+    The returned value is the median rating against all local and arriving fleets.
+    If no fleets are present, returns the base rating of the fleet.
+
+    :param int fleet_id: Fleet to rate. Must be owned by us.
+    :param int system_id: Target system to rate against.
+    :return float: Fleet rating weighted against enemies in system
+    """
+    # TODO: Generalize to allow rating of enemy fleets against our own systems.
+    #       For now, this fails as we check against sys_status['localEnemyFleetIDs']
+    universe = fo.getUniverse()
+    fleet = universe.getFleet(fleet_id)
+    if (assertion_fails(fleet is not None, "Invalid fleet.") or
+            assertion_fails(fleet.ownedBy(fo.empireID()), "Function only accepts owned fleets.")):
+        return get_fleet_rating(fleet_id)
+
+    aistate = get_aistate()
+    sys_status = aistate.systemStatus.get(system_id, {})
+    if not sys_status:
+        return get_fleet_rating(fleet_id)
+
+    ratings = []
+    for enemy_fleet_id in sys_status['localEnemyFleetIDs']:
+        fleet = universe.getFleet(enemy_fleet_id)
+        if not fleet:
+            continue
+        for ship_id in fleet.shipIDs:
+            this_rating = get_fleet_rating(fleet_id, enemy_stats=ShipCombatStats(ship_id))
+            if this_rating:
+                ratings.append(this_rating)
+    if not ratings:
+        return get_fleet_rating(fleet_id)
+
+    retval = median(ratings)  # may return None if error occurred
+    return retval if retval is not None else get_fleet_rating(fleet_id)
 
 
 def get_fleet_rating(fleet_id, enemy_stats=None):
