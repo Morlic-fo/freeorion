@@ -54,13 +54,13 @@ class ShipCombatStats(object):
             :param attacks:
             :type attacks: dict|None
             :param structure:
-            :type structure: int|None
+            :type structure: float|None
             :param shields:
-            :type shields: int|None
+            :type shields: float|None
             :return:
             """
-            self.structure = 1 if structure is None else structure
-            self.shields = 0 if shields is None else shields
+            self.structure = 1. if structure is None else structure
+            self.shields = 0. if shields is None else shields
             self.attacks = {} if attacks is None else tuple_to_dict(attacks)
 
         def get_stats(self, hashable=False):
@@ -79,19 +79,25 @@ class ShipCombatStats(object):
 
     class FighterStats(object):
         """ Stores fighter-related stats """
-        def __init__(self, capacity=0, launch_rate=0, damage=0):
-            self.capacity = capacity
-            self.launch_rate = launch_rate
-            self.damage = damage
+        def __init__(self, capacity, launch_rate, damage=None):
+            if damage is not None:
+                self.capacity = {damage: capacity}
+                self.launch_rate = {damage: launch_rate}
+            else:
+                self.capacity = capacity
+                self.launch_rate = launch_rate
 
         def __str__(self):
             return str(self.get_stats())
 
-        def get_stats(self):
+        def get_stats(self, hashable=False):
             """
-            :return: capacity, launch_rate, damage
+            :return: {damage: capacity}, {damage: launch_rate}
             """
-            return self.capacity, self.launch_rate, self.damage
+            if not hashable:
+                return self.capacity, self.launch_rate
+            else:
+                return dict_to_tuple(self.capacity), dict_to_tuple(self.launch_rate)
 
     def __init__(self, ship_id=INVALID_ID, consider_refuel=False, stats=None):
         self.__ship_id = ship_id
@@ -159,11 +165,11 @@ class ShipCombatStats(object):
         """
         return self._basic_stats.get_stats(hashable=hashable)
 
-    def get_fighter_stats(self):
+    def get_fighter_stats(self, hashable=False):
         """ Get fighter related combat stats
-        :return: capacity, launch_rate, damage
+        :return: {damage: capacity}, {damage: launch_rate}
         """
-        return self._fighter_stats.get_stats()
+        return self._fighter_stats.get_stats(hashable=hashable)
 
     def get_rating(self, enemy_stats=None, ignore_fighters=False):
         """Calculate a rating against specified enemy.
@@ -200,18 +206,24 @@ class ShipCombatStats(object):
             return _rating()
 
         # consider fighter attacks
-        capacity, launch_rate, fighter_damage = self.get_fighter_stats()
-        launched_1st_bout = min(capacity, launch_rate)
-        launched_2nd_bout = min(max(capacity - launch_rate, 0), launch_rate)
-        survival_rate = .2  # chance of a fighter launched in bout 1 to live in turn 3 TODO Actual estimation
-        total_fighter_damage = fighter_damage * (launched_1st_bout * (1+survival_rate) + launched_2nd_bout)
-        fighter_damage_per_bout = total_fighter_damage / 3
-        my_total_attack += fighter_damage_per_bout
+        fighter_capacities, fighter_launch_rates = self.get_fighter_stats()
+        if isinstance(fighter_capacities, tuple):
+            fighter_capacities = dict(fighter_capacities)
+            fighter_launch_rates = dict(fighter_launch_rates)
+        for fighter_damage, capacity in fighter_capacities.iteritems():
+            launch_rate = fighter_launch_rates.get(fighter_damage, 0)
 
-        # consider fighter protection factor
-        fighters_shot_down = (1-survival_rate**2) * launched_1st_bout + (1-survival_rate) * launched_2nd_bout
-        damage_prevented = fighters_shot_down * e_avg_attack
-        my_structure += damage_prevented
+            launched_1st_bout = min(capacity, launch_rate)
+            launched_2nd_bout = min(max(capacity - launch_rate, 0), launch_rate)
+            survival_rate = .2  # chance of a fighter launched in bout 1 to live in turn 3 TODO Actual estimation
+            total_fighter_damage = fighter_damage * (launched_1st_bout * (1+survival_rate) + launched_2nd_bout)
+            fighter_damage_per_bout = total_fighter_damage / 3
+            my_total_attack += fighter_damage_per_bout
+
+            # consider fighter protection factor
+            fighters_shot_down = (1-survival_rate**2) * launched_1st_bout + (1-survival_rate) * launched_2nd_bout
+            damage_prevented = fighters_shot_down * e_avg_attack
+            my_structure += damage_prevented
         return _rating()
 
     def get_rating_vs_planets(self):
@@ -221,9 +233,9 @@ class ShipCombatStats(object):
         """ Get all combat related stats of the ship.
 
         :param hashable: if true, return tuple instead of dict for attacks
-        :return: attacks, structure, shields, fighter-capacity, fighter-launch_rate, fighter-damage
+        :return: attacks, structure, shields, {fighter-damage: fighter-capacity}, {fighter-damage: fighter-launch_rate}
         """
-        return self.get_basic_stats(hashable=hashable) + self.get_fighter_stats()
+        return self.get_basic_stats(hashable=hashable) + self.get_fighter_stats(hashable=hashable)
 
 
 class FleetCombatStats(object):
@@ -258,7 +270,17 @@ class FleetCombatStats(object):
         :return: Rating of the fleet
         :rtype: float
         """
-        return combine_ratings_list(map(lambda x: x.get_rating(enemy_stats, ignore_fighters), self.__ship_stats))
+        old_rating = combine_ratings_list(map(lambda x: x.get_rating(enemy_stats, ignore_fighters), self.__ship_stats))
+        # TODO: Switch to combined ship rating
+        # for now, only print the new "combined ship rating"
+        if len(self.__ship_stats) == 1:
+            return old_rating
+        combined_stats = CombinedShipStats()
+        combined_stats.add_ship_combat_stats(self.get_ship_combat_stats())
+        new_rating = combined_stats.calc_stats().get_rating(enemy_stats, ignore_fighters)
+        warn("Old rating %d: %.f", self.__fleet_id, old_rating)
+        warn("New rating %d: %.f", self.__fleet_id, new_rating)
+        return old_rating
 
     def get_rating_vs_planets(self):
         return self.get_rating(ignore_fighters=True)
@@ -271,6 +293,53 @@ class FleetCombatStats(object):
             return
         for ship_id in fleet.shipIDs:
             self.__ship_stats.append(ShipCombatStats(ship_id, self._consider_refuel))
+
+
+class CombinedShipStats(object):
+
+    def __init__(self):
+        self._ship_stats = []
+
+    def add_ship_combat_stats(self, stats):
+        if isinstance(stats, list):
+            for entry in stats:
+                self.add_ship_combat_stats(entry)
+            return
+
+        self._ship_stats.append(stats)
+
+    def add_ship_by_id(self, ship_id):
+        if isinstance(ship_id, list):
+            for entry in ship_id:
+                self.add_ship_by_id(entry)
+            return
+
+        self.add_ship_combat_stats(ShipCombatStats(ship_id))
+
+    def calc_stats(self):
+        total_structure = 0
+        # shields are calculated by a weighted mean, using ship rating as weights.
+        total_shields_weighted = total_shield_weights = 0
+        total_attacks = Counter()
+        total_launch_rate = Counter()
+        total_capacity = Counter()
+
+        print(self._ship_stats)
+        for ship_stats in self._ship_stats:
+            attacks, structure, shields, fighter_capacity, fighter_launch_rate = ship_stats.get_stats()
+            total_attacks += Counter(attacks)
+            total_structure += structure
+            ship_rating = ship_stats.get_rating()
+            total_shield_weights += ship_rating
+            total_shields_weighted += shields * ship_rating
+            total_launch_rate += Counter(fighter_launch_rate)
+            total_capacity += Counter(fighter_capacity)
+
+        total_shields = float(total_shields_weighted) / total_shield_weights if total_shield_weights > 0 else 0
+        total_stats = ShipCombatStats(stats=(total_attacks, total_structure, total_shields,
+                                      total_capacity, total_launch_rate))
+        print(total_stats)
+        return total_stats
 
 
 def get_fleet_rating_vs_enemy_system(fleet_id, system_id):
@@ -322,6 +391,7 @@ def get_fleet_rating(fleet_id, enemy_stats=None):
     :return: Rating
     :rtype: float
     """
+    warn("get_fleet_rating called")
     return FleetCombatStats(fleet_id, consider_refuel=False).get_rating(enemy_stats)
 
 
