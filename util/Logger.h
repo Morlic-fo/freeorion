@@ -272,14 +272,23 @@ BOOST_LOG_ATTRIBUTE_KEYWORD(thread_id, "ThreadID", boost::log::attributes::curre
 
 #define __BASE_FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
 
+/** macro to check if the log is currently active (given the logger threshold)
+    - it uses a dummy for-loop which is run at maximum once instead of an 
+    if-statement to prevent issues with subsequent else-statements in places
+    where the macro is used. Braces to indicate scope aren't feasible as they 
+    interfere with the streaming operator.*/
+#define IF_LOG_IS_ACTIVE(channel, lvl) \
+    for (bool dummy_=IsActiveLog(#channel, lvl); dummy_;dummy_=false)
+
 #ifndef FREEORION_WIN32
 
-#define FO_LOGGER(name, lvl)                                            \
-    BOOST_LOG_STREAM_WITH_PARAMS(                                       \
-        FO_GLOBAL_LOGGER_NAME(name)::get(),                             \
-        (boost::log::keywords::severity = lvl))                         \
-    << boost::log::add_value("SrcFilename", __BASE_FILENAME__)          \
-    << boost::log::add_value("SrcLinenum", __LINE__)
+#define FO_LOGGER(name, lvl)                                        \
+    IF_LOG_IS_ACTIVE(FO_GLOBAL_LOGGER_NAME(name), lvl)              \
+        BOOST_LOG_STREAM_WITH_PARAMS(                               \
+            FO_GLOBAL_LOGGER_NAME(name)::get(),                     \
+            (boost::log::keywords::severity = lvl))                 \
+        << boost::log::add_value("SrcFilename", __BASE_FILENAME__)  \
+        << boost::log::add_value("SrcLinenum", __LINE__)
 
 #define TraceLogger(name) FO_LOGGER(name, LogLevel::trace)
 
@@ -299,12 +308,13 @@ BOOST_LOG_ATTRIBUTE_KEYWORD(thread_id, "ThreadID", boost::log::attributes::curre
 // handling of empty macro arguments.
 // https://msdn.microsoft.com/en-us/library/hh567368.aspx
 // https://blogs.msdn.microsoft.com/vcblog/2017/03/07/c-standards-conformance-from-microsoft/
-#define FO_LOGGER_PRESTITCHED(lvl, logger)                              \
-    BOOST_LOG_STREAM_WITH_PARAMS(                                       \
-        logger::get(),                                                  \
-        (boost::log::keywords::severity = lvl))                         \
-    << boost::log::add_value("SrcFilename", __BASE_FILENAME__)          \
-    << boost::log::add_value("SrcLinenum", __LINE__)
+#define FO_LOGGER_PRESTITCHED(lvl, logger)                                  \
+    IF_LOG_IS_ACTIVE(logger, lvl)                                           \
+        BOOST_LOG_STREAM_WITH_PARAMS(                                       \
+            logger::get(),                                                  \
+            (boost::log::keywords::severity = lvl))                         \
+        << boost::log::add_value("SrcFilename", __BASE_FILENAME__)          \
+        << boost::log::add_value("SrcLinenum", __LINE__)                    \
 
 #define TraceLogger(...) FO_LOGGER_PRESTITCHED(LogLevel::trace, fo_logger_global_##__VA_ARGS__)
 #define DebugLogger(...) FO_LOGGER_PRESTITCHED(LogLevel::debug, fo_logger_global_##__VA_ARGS__)
@@ -314,6 +324,9 @@ BOOST_LOG_ATTRIBUTE_KEYWORD(thread_id, "ThreadID", boost::log::attributes::curre
 
 
 #endif
+
+/* Check if the log with given log_level is active according to the user-set log level threshold.*/
+FO_COMMON_API bool IsActiveLog(const std::string& channel, LogLevel log_level);
 
 /** Sets the \p threshold of \p source.  \p source == "" is the default logger.*/
 FO_COMMON_API void SetLoggerThreshold(const std::string& source, LogLevel threshold);

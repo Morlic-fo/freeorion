@@ -292,6 +292,69 @@ std::vector<std::string> CreatedLoggersNames()
 
 namespace {
 
+    /** LogLevelCache implements a thread-safe singleton cache to access 
+        the current LogLevel threshold for channels.
+
+        It uses a two-layer cache system to minimize the number of locks required:
+        1) A shared cache synchronized by a mutex
+        2) A local cache for each thread which can be accessed without locking
+
+        To synchronize the caches, an atomic counter is incremented each time the 
+        shared cache is updated. Threads use this counter to check if their local
+        cache is up-to-date.
+        */
+    class LogLevelCache {
+        using log_level_cache = std::unordered_map<std::string, LogLevel>;
+
+    private:
+        LogLevelCache() = default;
+        ~LogLevelCache() = default;
+        LogLevelCache(const LogLevelCache&) = delete;
+        LogLevelCache& operator=(const LogLevelCache&) = delete;
+
+        log_level_cache m_shared_cache;
+        std::atomic<size_t> m_update_count = 0; ///< the number of updates to the cache
+        std::mutex m_mutex; ///< to synchronize access to the shared cache
+
+
+    public:
+        LogLevel getLogLevel(const std::string& channel) {
+            thread_local static log_level_cache local_cache;
+            thread_local static size_t last_seen_update_count = 0;
+            
+            // If the shared cache is newer than our local cache, fetch new status
+            if (last_seen_update_count < m_update_count)
+            {
+                std::lock_guard<std::mutex> lock(m_mutex);
+                local_cache = m_shared_cache;
+                last_seen_update_count = m_update_count;
+            }
+            
+            // Look for the channel in local cache
+            auto it = local_cache.find(channel);
+            if (it != local_cache.end())
+                return (*it).second;
+
+            // Channel not found in cache - fall back to default
+            return default_log_level_threshold;
+        }
+
+        void updateLogLevel(const std::string& channel, LogLevel threshold) {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_shared_cache["fo_logger_global_"+channel] = threshold;
+            m_update_count++;
+        }
+
+        static LogLevelCache& getInstance() {
+            static LogLevelCache the_instance;
+            return the_instance;
+        }
+    };
+
+    LogLevel getLogLevel(const std::string& channel)
+    { return LogLevelCache::getInstance().getLogLevel(channel); }
+
+
     /** LoggerThresholdSetter sets the threshold of a logger */
     class LoggerThresholdSetter {
         /// m_mutex serializes access from different threads
@@ -305,9 +368,9 @@ namespace {
         // Set the logger threshold and return the logger name and threshold used.
         std::pair<std::string, LogLevel> SetThreshold(const std::string& source, LogLevel threshold) {
             std::lock_guard<std::mutex> lock(m_mutex);
+            LogLevelCache::getInstance().updateLogLevel(source, threshold);
 
             auto used_threshold = ForcedThreshold() ? *ForcedThreshold() : threshold;
-            logging::core::get()->reset_filter();
             m_min_channel_severity[source] = used_threshold;
             logging::core::get()->set_filter(m_min_channel_severity);
 
@@ -324,6 +387,11 @@ namespace {
         return logger_threshold_setter.SetThreshold(source, threshold);
     }
 }
+
+
+bool IsActiveLog(const std::string& channel, LogLevel log_level)
+{ return log_level >= getLogLevel(channel); }
+
 
 void SetLoggerThreshold(const std::string& source, LogLevel threshold) {
     const auto& name_and_threshold = SetLoggerThresholdCore(source, threshold);
