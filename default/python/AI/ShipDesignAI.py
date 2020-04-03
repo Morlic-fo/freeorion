@@ -106,7 +106,7 @@ def _get_capacity(x):
     return x.capacity
 
 
-class ShipDesignCache(object):
+class ShipDesignCache():
     """This class handles the caching of information used to assess and build shipdesigns in this module.
 
     Important methods:
@@ -611,7 +611,7 @@ class ShipDesignCache(object):
 Cache = ShipDesignCache()
 
 
-class AdditionalSpecifications(object):
+class AdditionalSpecifications():
     """This class is a container for all kind of additional information
     and requirements we may want to use when assessing ship designs.
 
@@ -671,7 +671,7 @@ class AdditionalSpecifications(object):
                 "enemyMineDmg: %s" % self.enemy_mine_dmg)
 
 
-class DesignStats(object):
+class DesignStats():
 
     def __init__(self):
         self.attacks = {}  # {damage: shots_per_round}
@@ -704,7 +704,7 @@ class DesignStats(object):
                 self.fighter_capacity, self.fighter_launch_rate, self.fighter_damage)
 
 
-class ShipDesigner(object):
+class ShipDesigner():
     """This class and its subclasses implement the building of a ship design and its rating.
      Specialised Designs with their own rating system or optimizing algorithms should inherit from this class.
 

@@ -1,7 +1,7 @@
 # Mock module for tests
 
 
-class aggression(object):
+class aggression():
     """Aggression enumeration."""
     beginner = 0
     turtle = 1
@@ -11,7 +11,7 @@ class aggression(object):
     maniacal = 5
 
 
-class planetSize(object):
+class planetSize():
     """PlanetSize enumeration."""
     tiny = 1
     small = 2
@@ -24,7 +24,7 @@ class planetSize(object):
     unknown = -1
 
 
-class starType(object):
+class starType():
     """StarType enumeration."""
     blue = 0
     white = 1
@@ -37,7 +37,7 @@ class starType(object):
     unknown = -1
 
 
-class visibility(object):
+class visibility():
     """Visibility enumeration."""
     invalid = -1
     none = 0
@@ -46,7 +46,7 @@ class visibility(object):
     full = 3
 
 
-class planetType(object):
+class planetType():
     """PlanetType enumeration."""
     # this is the listing order in EnumWrapper.cpp, so keeping it the same here
     swamp = 0
@@ -63,7 +63,7 @@ class planetType(object):
     unknown = -1
 
 
-class planetEnvironment(object):
+class planetEnvironment():
     """PlanetEnvironment enumeration."""
     uninhabitable = 0
     hostile = 1
@@ -72,7 +72,7 @@ class planetEnvironment(object):
     good = 4
 
 
-class techStatus(object):
+class techStatus():
     """TechStatus enumeration."""
     unresearchable = 0
     partiallyUnlocked = 1
@@ -80,14 +80,14 @@ class techStatus(object):
     complete = 3
 
 
-class buildType(object):
+class buildType():
     """BuildType enumeration."""
     building = 0
     ship = 1
     stockpile = 2
 
 
-class resourceType(object):
+class resourceType():
     """ResourceType enumeration."""
     industry = 0
     trade = 1
@@ -95,7 +95,7 @@ class resourceType(object):
     stockpile = 3
 
 
-class meterType(object):
+class meterType():
     """MeterType enumeration."""
     targetPopulation = 0
     targetIndustry = 1
@@ -136,14 +136,14 @@ class meterType(object):
     speed = 34
 
 
-class diplomaticStatus(object):
+class diplomaticStatus():
     """DiplomaticStatus enumeration."""
     war = 0
     peace = 1
     allied = 2
 
 
-class diplomaticMessageType(object):
+class diplomaticMessageType():
     """DiplomaticMessageType enumeration."""
     noMessage = -1
     warDeclaration = 0
@@ -156,14 +156,14 @@ class diplomaticMessageType(object):
     rejectProposal = 7
 
 
-class captureResult(object):
+class captureResult():
     """CaptureResult enumeration."""
     capture = 0
     destroy = 1
     retain = 2
 
 
-class effectsCauseType(object):
+class effectsCauseType():
     """EffectsCauseType enumeration."""
     invalid = -1
     unknown = 0
@@ -177,14 +177,14 @@ class effectsCauseType(object):
     shipHull = 8
 
 
-class shipSlotType(object):
+class shipSlotType():
     """ShipSlotType enumeration."""
     external = 0
     internal = 1
     core = 2
 
 
-class shipPartClass(object):
+class shipPartClass():
     """ShipPartClass enumeration."""
     shortRange = 0
     fighterBay = 1
@@ -205,7 +205,7 @@ class shipPartClass(object):
     productionLocation = 16
 
 
-class unlockableItemType(object):
+class unlockableItemType():
     """UnlockableItemType enumeration."""
     invalid = -1
     building = 0
@@ -215,7 +215,7 @@ class unlockableItemType(object):
     tech = 4
 
 
-class galaxySetupOption(object):
+class galaxySetupOption():
     """GalaxySetupOption enumeration."""
     invalid = -1
     none = 0
@@ -225,7 +225,7 @@ class galaxySetupOption(object):
     random = 4
 
 
-class galaxyShape(object):
+class galaxyShape():
     """GalaxyShape enumeration."""
     invalid = -1
     spiral2 = 0
@@ -240,7 +240,7 @@ class galaxyShape(object):
     random = 9
 
 
-class ruleType(object):
+class ruleType():
     """RuleType enumeration."""
     invalid = -1
     toggle = 0
@@ -249,7 +249,7 @@ class ruleType(object):
     string = 3
 
 
-class roleType(object):
+class roleType():
     """RoleType enumeration."""
     host = 0
     clientTypeModerator = 1

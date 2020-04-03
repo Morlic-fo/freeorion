@@ -6,7 +6,7 @@
 
 # type: ignore
 
-class AccountingInfoVec(object):
+class AccountingInfoVec():
     def __contains__(self, obj):
         """
         :param obj:
@@ -70,7 +70,7 @@ class AccountingInfoVec(object):
         return None
 
 
-class EffectCause(object):
+class EffectCause():
     @property
     def causeType(self):
         pass
@@ -84,7 +84,7 @@ class EffectCause(object):
         pass
 
 
-class GGColor(object):
+class GGColor():
     @property
     def a(self):
         return int()
@@ -102,7 +102,7 @@ class GGColor(object):
         return int()
 
 
-class GalaxySetupData(object):
+class GalaxySetupData():
     @property
     def age(self):
         return galaxySetupOption()
@@ -148,7 +148,7 @@ class GalaxySetupData(object):
         return galaxySetupOption()
 
 
-class GameRules(object):
+class GameRules():
     @property
     def empty(self):
         pass
@@ -218,7 +218,7 @@ class GameRules(object):
         return bool()
 
 
-class IntBoolMap(object):
+class IntBoolMap():
     def __contains__(self, obj):
         """
         :param obj:
@@ -266,7 +266,7 @@ class IntBoolMap(object):
         return None
 
 
-class IntDblMap(object):
+class IntDblMap():
     def __contains__(self, obj):
         """
         :param obj:
@@ -314,7 +314,7 @@ class IntDblMap(object):
         return None
 
 
-class IntFltMap(object):
+class IntFltMap():
     def __contains__(self, obj):
         """
         :param obj:
@@ -362,7 +362,7 @@ class IntFltMap(object):
         return None
 
 
-class IntIntMap(object):
+class IntIntMap():
     def __contains__(self, obj):
         """
         :param obj:
@@ -410,7 +410,7 @@ class IntIntMap(object):
         return None
 
 
-class IntPairVec(object):
+class IntPairVec():
     def __contains__(self, obj):
         """
         :param obj:
@@ -474,7 +474,7 @@ class IntPairVec(object):
         return None
 
 
-class IntSet(object):
+class IntSet():
     def __contains__(self, number):
         """
         :param number:
@@ -516,7 +516,7 @@ class IntSet(object):
         return int()
 
 
-class IntSetSet(object):
+class IntSetSet():
     def __contains__(self, int_set):
         """
         :param int_set:
@@ -558,7 +558,7 @@ class IntSetSet(object):
         return int()
 
 
-class IntVec(object):
+class IntVec():
     def __contains__(self, obj):
         """
         :param obj:
@@ -622,7 +622,7 @@ class IntVec(object):
         return None
 
 
-class ItemSpec(object):
+class ItemSpec():
     @property
     def name(self):
         return str()
@@ -632,7 +632,7 @@ class ItemSpec(object):
         return unlockableItemType()
 
 
-class ItemSpecVec(object):
+class ItemSpecVec():
     def __contains__(self, obj):
         """
         :param obj:
@@ -696,7 +696,7 @@ class ItemSpecVec(object):
         return None
 
 
-class MeterTypeAccountingInfoVecMap(object):
+class MeterTypeAccountingInfoVecMap():
     def __contains__(self, obj):
         """
         :param obj:
@@ -744,7 +744,7 @@ class MeterTypeAccountingInfoVecMap(object):
         return None
 
 
-class MeterTypeMeterMap(object):
+class MeterTypeMeterMap():
     def __contains__(self, obj):
         """
         :param obj:
@@ -792,7 +792,7 @@ class MeterTypeMeterMap(object):
         return None
 
 
-class MeterTypeStringPair(object):
+class MeterTypeStringPair():
     @property
     def meterType(self):
         pass
@@ -802,7 +802,7 @@ class MeterTypeStringPair(object):
         pass
 
 
-class Order(object):
+class Order():
     @property
     def empireID(self):
         pass
@@ -812,7 +812,7 @@ class Order(object):
         pass
 
 
-class OrderSet(object):
+class OrderSet():
     @property
     def size(self):
         pass
@@ -864,7 +864,7 @@ class OrderSet(object):
         return None
 
 
-class PairIntInt_IntMap(object):
+class PairIntInt_IntMap():
     def __contains__(self, obj):
         """
         :param obj:
@@ -912,7 +912,7 @@ class PairIntInt_IntMap(object):
         return None
 
 
-class ShipPartMeterMap(object):
+class ShipPartMeterMap():
     def __contains__(self, obj):
         """
         :param obj:
@@ -960,7 +960,7 @@ class ShipPartMeterMap(object):
         return None
 
 
-class ShipSlotVec(object):
+class ShipSlotVec():
     def __contains__(self, obj):
         """
         :param obj:
@@ -1024,7 +1024,7 @@ class ShipSlotVec(object):
         return None
 
 
-class StringSet(object):
+class StringSet():
     def __contains__(self, string):
         """
         :param string:
@@ -1066,7 +1066,7 @@ class StringSet(object):
         return int()
 
 
-class StringVec(object):
+class StringVec():
     def __contains__(self, obj):
         """
         :param obj:
@@ -1130,7 +1130,7 @@ class StringVec(object):
         return None
 
 
-class StringsMap(object):
+class StringsMap():
     def __contains__(self, obj):
         """
         :param obj:
@@ -1178,7 +1178,7 @@ class StringsMap(object):
         return None
 
 
-class TargetIDAccountingMapMap(object):
+class TargetIDAccountingMapMap():
     def __contains__(self, obj):
         """
         :param obj:
@@ -1226,7 +1226,7 @@ class TargetIDAccountingMapMap(object):
         return None
 
 
-class VisibilityIntMap(object):
+class VisibilityIntMap():
     def __contains__(self, obj):
         """
         :param obj:
@@ -1274,7 +1274,7 @@ class VisibilityIntMap(object):
         return None
 
 
-class buildingType(object):
+class buildingType():
     @property
     def costTimeLocationInvariant(self):
         return bool()
@@ -1356,7 +1356,7 @@ class buildingType(object):
         return int()
 
 
-class diplomaticMessage(object):
+class diplomaticMessage():
     @property
     def recipient(self):
         return int()
@@ -1370,7 +1370,7 @@ class diplomaticMessage(object):
         return diplomaticMessageType()
 
 
-class diplomaticStatusUpdate(object):
+class diplomaticStatusUpdate():
     @property
     def empire1(self):
         pass
@@ -1384,7 +1384,7 @@ class diplomaticStatusUpdate(object):
         pass
 
 
-class empire(object):
+class empire():
     @property
     def allShipDesigns(self):
         return IntSet()
@@ -1632,7 +1632,7 @@ class empire(object):
         return bool()
 
 
-class fieldType(object):
+class fieldType():
     @property
     def description(self):
         return str()
@@ -1646,7 +1646,7 @@ class fieldType(object):
         return str()
 
 
-class hullType(object):
+class hullType():
     @property
     def costTimeLocationInvariant(self):
         return bool()
@@ -1720,7 +1720,7 @@ class hullType(object):
         return int()
 
 
-class meter(object):
+class meter():
     @property
     def current(self):
         return float()
@@ -1734,7 +1734,7 @@ class meter(object):
         return float()
 
 
-class partType(object):
+class partType():
     @property
     def capacity(self):
         return float()
@@ -1788,13 +1788,13 @@ class partType(object):
         return int()
 
 
-class popCenter(object):
+class popCenter():
     @property
     def speciesName(self):
         pass
 
 
-class productionQueue(object):
+class productionQueue():
     @property
     def allocatedPP(self):
         return resPoolMap()
@@ -1852,7 +1852,7 @@ class productionQueue(object):
         return IntSetSet()
 
 
-class productionQueueElement(object):
+class productionQueueElement():
     @property
     def allocation(self):
         return float()
@@ -1898,11 +1898,11 @@ class productionQueueElement(object):
         return int()
 
 
-class resPool(object):
+class resPool():
     pass
 
 
-class resPoolMap(object):
+class resPoolMap():
     def __contains__(self, obj):
         """
         :param obj:
@@ -1950,7 +1950,7 @@ class resPoolMap(object):
         return None
 
 
-class researchQueue(object):
+class researchQueue():
     @property
     def empireID(self):
         return int()
@@ -2004,7 +2004,7 @@ class researchQueue(object):
         return bool()
 
 
-class researchQueueElement(object):
+class researchQueueElement():
     @property
     def allocation(self):
         return float()
@@ -2018,7 +2018,7 @@ class researchQueueElement(object):
         return int()
 
 
-class resourceCenter(object):
+class resourceCenter():
     @property
     def availableFoci(self):
         pass
@@ -2032,7 +2032,7 @@ class resourceCenter(object):
         pass
 
 
-class shipDesign(object):
+class shipDesign():
     @property
     def attack(self):
         return float()
@@ -2186,7 +2186,7 @@ class shipDesign(object):
         return int()
 
 
-class sitrep(object):
+class sitrep():
     @property
     def getTags(self):
         pass
@@ -2216,7 +2216,7 @@ class sitrep(object):
         return str()
 
 
-class special(object):
+class special():
     @property
     def description(self):
         return str()
@@ -2246,7 +2246,7 @@ class special(object):
         return float()
 
 
-class species(object):
+class species():
     @property
     def canColonize(self):
         return bool()
@@ -2292,7 +2292,7 @@ class species(object):
         return planetEnvironment()
 
 
-class tech(object):
+class tech():
     @property
     def category(self):
         return str()
@@ -2354,7 +2354,7 @@ class tech(object):
         return int()
 
 
-class universe(object):
+class universe():
     @property
     def allObjectIDs(self):
         return IntVec()
@@ -2608,7 +2608,7 @@ class universe(object):
         return None
 
 
-class universeObject(object):
+class universeObject():
     @property
     def ageInTurns(self):
         pass

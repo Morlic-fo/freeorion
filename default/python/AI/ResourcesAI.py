@@ -36,7 +36,7 @@ _focus_names = {INDUSTRY: "Industry", RESEARCH: "Research", GROWTH: "Growth", PR
 RESEARCH_WEIGHTING = 2.3
 
 
-class PlanetFocusInfo(object):
+class PlanetFocusInfo():
     """ The current, possible and future foci and output of one planet."""
     def __init__(self, planet):
         self.planet = planet
@@ -50,7 +50,7 @@ class PlanetFocusInfo(object):
         self.future_focus = self.current_focus
 
 
-class PlanetFocusManager(object):
+class PlanetFocusManager():
     """PlanetFocusManager tracks all of the empire's planets, what their current and future focus will be."""
 
     def __init__(self):
@@ -141,7 +141,7 @@ class PlanetFocusManager(object):
             pinfo.possible_output[PROTECTION] = pinfo.possible_output[GROWTH]
 
 
-class Reporter(object):
+class Reporter():
     """Reporter contains some file scope functions to report"""
 
     def __init__(self, focus_manager):

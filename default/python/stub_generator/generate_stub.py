@@ -12,7 +12,7 @@ def handle_class(info):
     assert not docs, "Got docs need to handle it"
     parents = info['parents']
     if not parents:
-        parents = ['object']  # instance is boost wrapper
+        parents = []  # instance is boost wrapper
     result = ['class %s(%s):' % (name, ', '.join(parents))]
 
     properties = []

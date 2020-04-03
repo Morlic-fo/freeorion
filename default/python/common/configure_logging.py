@@ -84,7 +84,7 @@ try:
 except ImportError as e:
 
     # Create an alternative logger for use in testing when the server is unavailable
-    class _FreeOrionLoggerForTest(object):
+    class _FreeOrionLoggerForTest():
         """A stub freeorion_logger for testing"""
         @staticmethod
         def debug(msg, *args):
@@ -109,7 +109,7 @@ except ImportError as e:
     freeorion_logger = _FreeOrionLoggerForTest()
 
 
-class _stdXLikeStream(object):
+class _stdXLikeStream():
     """A stream-like object to redirect stdout or stderr to the C++ process."""
     def __init__(self, level):
         self.logger = {

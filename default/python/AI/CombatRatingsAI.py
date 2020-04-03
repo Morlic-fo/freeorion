@@ -45,9 +45,9 @@ def default_ship_stats():
     return ShipCombatStats(stats=(attacks, structure, shields, fighters, launch_rate, fighter_damage))
 
 
-class ShipCombatStats(object):
+class ShipCombatStats():
     """Stores all relevant stats of a ship for combat strength evaluation."""
-    class BasicStats(object):
+    class BasicStats():
         """Stores non-fighter-related stats."""
         def __init__(self, attacks, structure, shields):
             """
@@ -78,7 +78,7 @@ class ShipCombatStats(object):
         def __str__(self):
             return str(self.get_stats())
 
-    class FighterStats(object):
+    class FighterStats():
         """ Stores fighter-related stats """
         def __init__(self, capacity, launch_rate, damage):
             self.capacity = capacity
@@ -234,7 +234,7 @@ class ShipCombatStats(object):
         return self.get_basic_stats(hashable=hashable) + self.get_fighter_stats()
 
 
-class FleetCombatStats(object):
+class FleetCombatStats():
     """Stores combat related stats of the fleet."""
     def __init__(self, fleet_id=INVALID_ID, consider_refuel=False):
         self.__fleet_id = fleet_id

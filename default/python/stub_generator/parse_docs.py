@@ -153,7 +153,7 @@ def normalize_rtype(rtype):
     return rtype
 
 
-class Docs(object):
+class Docs():
     def __init__(self, text, indent, is_class=False):
         self.indent = indent
         self.is_class = is_class
@@ -232,7 +232,7 @@ class Docs(object):
 
 
 if __name__ == '__main__':
-    # example1 = """__delitem__( (IntBoolMap)arg1, (object)arg2) -> None"""
+    # example1 = """__delitem__( (IntBoolMap)arg1, ()arg2) -> None"""
     example1 = """getEmpire() -> empire\n\ngetEmpire((int)star_name, (int)arg2, (int)arg3) -> empire"""
 
     # example1 = ("""getUserDataDir() -> str :\n

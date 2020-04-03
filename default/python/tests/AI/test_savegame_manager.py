@@ -5,7 +5,7 @@ from common import six
 from pytest import fixture
 
 
-class DummyTestClass(object):
+class DummyTestClass():
     def __init__(self):
         self.some_int = 812
         self.some_negative_int = -712
@@ -23,7 +23,7 @@ class DummyTestClass(object):
         pass
 
 
-class TrustedScope(object):
+class TrustedScope():
 
     def __enter__(self):
         six.moves.reload_module(savegame_codec)  # just to be sure
@@ -44,12 +44,12 @@ class Success(Exception):
     pass
 
 
-class GetStateTester(object):
+class GetStateTester():
     def __getstate__(self):
         raise Success
 
 
-class SetStateTester(object):
+class SetStateTester():
     def __setstate__(self, state):
         raise Success
 
